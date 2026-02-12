@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Budget Tracker - Gestionnaire de Budget</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💰 Budget Tracker</h1>
+            <p>Gérez vos finances personnelles facilement</p>
+        </header>
+
+        <!-- Tableau de bord -->
+        <section class="dashboard">
+            <div class="stat-card balance">
+                <h3>Solde Total</h3>
+                <p class="amount" id="totalBalance">0.00 €</p>
+            </div>
+            <div class="stat-card income">
+                <h3>Revenus</h3>
+                <p class="amount" id="totalIncome">0.00 €</p>
+            </div>
+            <div class="stat-card expense">
+                <h3>Dépenses</h3>
+                <p class="amount" id="totalExpense">0.00 €</p>
+            </div>
+        </section>
+
+        <!-- Formulaires -->
+        <section class="forms-section">
+            <div class="form-container">
+                <h2>➕ Ajouter un Revenu</h2>
+                <form id="incomeForm">
+                    <div class="form-group">
+                        <label for="incomeAmount">Montant (€)</label>
+                        <input type="number" id="incomeAmount" step="0.01" required placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label for="incomeCategory">Catégorie</label>
+                        <select id="incomeCategory" required>
+                            <option value="">Sélectionnez une catégorie</option>
+                            <option value="Salaire">Salaire</option>
+                            <option value="Freelance">Freelance</option>
+                            <option value="Investissement">Investissement</option>
+                            <option value="Cadeau">Cadeau</option>
+                            <option value="Autre">Autre</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="incomeDescription">Description</label>
+                        <input type="text" id="incomeDescription" required placeholder="Ex: Salaire de janvier">
+                    </div>
+                    <div class="form-group">
+                        <label for="incomeDate">Date</label>
+                        <input type="date" id="incomeDate" required>
+                    </div>
+                    <button type="submit" class="btn btn-income">Ajouter Revenu</button>
+                </form>
+            </div>
+
+            <div class="form-container">
+                <h2>➖ Ajouter une Dépense</h2>
+                <form id="expenseForm">
+                    <div class="form-group">
+                        <label for="expenseAmount">Montant (€)</label>
+                        <input type="number" id="expenseAmount" step="0.01" required placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label for="expenseCategory">Catégorie</label>
+                        <select id="expenseCategory" required>
+                            <option value="">Sélectionnez une catégorie</option>
+                            <option value="Courses">🛒 Courses</option>
+                            <option value="Appartement">🏠 Appartement</option>
+                            <option value="Shopping">🛍️ Shopping</option>
+                            <option value="Transport">🚗 Transport</option>
+                            <option value="Loisirs">🎮 Loisirs</option>
+                            <option value="Santé">⚕️ Santé</option>
+                            <option value="Restaurant">🍽️ Restaurant</option>
+                            <option value="Éducation">📚 Éducation</option>
+                            <option value="Autre">📦 Autre</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="expenseDescription">Description</label>
+                        <input type="text" id="expenseDescription" required placeholder="Ex: Courses Carrefour">
+                    </div>
+                    <div class="form-group">
+                        <label for="expenseDate">Date</label>
+                        <input type="date" id="expenseDate" required>
+                    </div>
+                    <button type="submit" class="btn btn-expense">Ajouter Dépense</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- Filtres -->
+        <section class="filters">
+            <h2>📊 Historique des Transactions</h2>
+            <div class="filter-controls">
+                <select id="filterType">
+                    <option value="all">Toutes les transactions</option>
+                    <option value="income">Revenus uniquement</option>
+                    <option value="expense">Dépenses uniquement</option>
+                </select>
+                <select id="filterCategory">
+                    <option value="all">Toutes les catégories</option>
+                </select>
+                <button class="btn btn-clear" id="clearAll">🗑️ Tout Effacer</button>
+            </div>
+        </section>
+
+        <!-- Liste des transactions -->
+        <section class="transactions">
+            <div id="transactionsList"></div>
+        </section>
+
+        <!-- Graphique des dépenses -->
+        <section class="chart-section">
+            <h2>📈 Dépenses par Catégorie</h2>
+            <canvas id="expenseChart"></canvas>
+        </section>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
