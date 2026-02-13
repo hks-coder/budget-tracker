@@ -433,3 +433,177 @@ header p {
 ::-webkit-scrollbar-thumb:hover {
     background: #5568d3;
 }
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.btn-income {
+    background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+    color: #2c3e50;
+}
+
+.btn-expense {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+    color: #2c3e50;
+}
+
+.btn-clear {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+/* Filters */
+.filters {
+    margin-bottom: 30px;
+}
+
+.filters h2 {
+    color: #2c3e50;
+    margin-bottom: 15px;
+}
+
+.filter-controls {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.filter-controls select {
+    flex: 1;
+    min-width: 200px;
+    padding: 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 1em;
+}
+
+/* Transactions */
+.transactions {
+    margin-bottom: 30px;
+}
+
+#transactionsList {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.transaction-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-radius: 10px;
+    border-left: 5px solid;
+    background: #f8f9fa;
+    transition: all 0.3s ease;
+}
+
+.transaction-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.transaction-item.income {
+    border-left-color: #27ae60;
+}
+
+.transaction-item.expense {
+    border-left-color: #e74c3c;
+}
+
+.transaction-info h4 {
+    color: #2c3e50;
+    margin-bottom: 5px;
+}
+
+.transaction-info p {
+    color: #7f8c8d;
+    font-size: 0.9em;
+}
+
+.transaction-amount {
+    font-size: 1.5em;
+    font-weight: bold;
+}
+
+.transaction-item.income .transaction-amount {
+    color: #27ae60;
+}
+
+.transaction-item.expense .transaction-amount {
+    color: #e74c3c;
+}
+
+.delete-btn {
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    cursor: pointer;
+    padding: 5px 10px;
+    transition: transform 0.2s ease;
+}
+
+.delete-btn:hover {
+    transform: scale(1.2);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #7f8c8d;
+}
+
+.empty-state h3 {
+    font-size: 2em;
+    margin-bottom: 10px;
+}
+
+/* Chart Section */
+.chart-section {
+    background: #f8f9fa;
+    padding: 25px;
+    border-radius: 15px;
+    margin-top: 30px;
+}
+
+.chart-section h2 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+#expenseChart {
+    max-height: 400px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .container {
+        padding: 20px;
+    }
+    
+    header h1 {
+        font-size: 2em;
+    }
+    
+    .forms-section {
+        grid-template-columns: 1fr;
+    }
+    
+    .filter-controls {
+        flex-direction: column;
+    }
+    
+    .filter-controls select {
+        width: 100%;
+    }
+    
+    .transaction-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 10px;
+    }
+}
