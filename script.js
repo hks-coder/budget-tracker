@@ -373,6 +373,9 @@ const archivesModal = document.getElementById('archivesModal');
 const closeModal = document.getElementById('closeModal');
 const currentMonthInfo = document.getElementById('currentMonthInfo');
 
+// Constants
+const MAX_PREVIEW_TRANSACTIONS = 5;
+
 // Get current month and year
 function getCurrentMonthYear() {
     const now = new Date();
@@ -531,7 +534,7 @@ function displayArchives() {
     
     archivesList.innerHTML = archivedMonths.map(archive => {
         const transactionsHTML = archive.transactions
-            .slice(0, 5)
+            .slice(0, MAX_PREVIEW_TRANSACTIONS)
             .map(t => `
                 <div class="archive-transaction ${t.type}">
                     <span>${t.category} - ${t.description}</span>
@@ -539,13 +542,13 @@ function displayArchives() {
                 </div>
             `).join('');
         
-        const moreCount = archive.transactions.length - 5;
+        const moreCount = archive.transactions.length - MAX_PREVIEW_TRANSACTIONS;
         
         return `
             <div class="archive-item">
                 <h3>📅 ${archive.month} ${archive.year}</h3>
                 <p style="color: #7f8c8d; font-size: 0.9em; margin-bottom: 10px;">
-                    Archivé le ${formatDate(archive.archivedDate.split('T')[0])}
+                    Archivé le ${new Date(archive.archivedDate).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
                 </p>
                 <div class="archive-stats">
                     <div class="archive-stat income">
