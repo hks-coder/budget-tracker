@@ -7,6 +7,26 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- PIN Entry Modal -->
+    <div id="pinModal" class="pin-modal">
+        <div class="pin-modal-content">
+            <h2>🔐 Code de Sécurité</h2>
+            <p>Entrez le code pour accéder au profil</p>
+            <div class="pin-selector">
+                <label for="pinProfileSelect">Sélectionnez un profil:</label>
+                <select id="pinProfileSelect">
+                    <option value="hemank">Hemank (Individuel)</option>
+                    <option value="jullian">Jullian (Partagé)</option>
+                </select>
+            </div>
+            <div class="pin-input-container">
+                <input type="password" id="pinInput" placeholder="Entrez le code" maxlength="4" inputmode="numeric" pattern="[0-9]*">
+            </div>
+            <button id="pinSubmit" class="btn btn-pin">Valider</button>
+            <p id="pinError" class="pin-error" style="display: none;"></p>
+        </div>
+    </div>
+
     <div class="container">
         <header>
             <h1>💰 Budget Tracker</h1>

@@ -1,3 +1,24 @@
+// PIN Codes for profiles
+// NOTE: These PINs are stored client-side for convenience/privacy protection only.
+// They are visible in the source code and should not be considered secure.
+// For true security, a server-side authentication system would be required.
+const PIN_CODES = {
+    'hemank': '1994',
+    'jullian': '1991'
+};
+
+// PIN Modal Elements
+const pinModal = document.getElementById('pinModal');
+const pinProfileSelect = document.getElementById('pinProfileSelect');
+const pinInput = document.getElementById('pinInput');
+const pinSubmit = document.getElementById('pinSubmit');
+const pinError = document.getElementById('pinError');
+const container = document.querySelector('.container');
+
+// Check if user is authenticated for current session
+let isAuthenticated = sessionStorage.getItem('isAuthenticated') === 'true';
+let authenticatedProfile = sessionStorage.getItem('authenticatedProfile');
+
 // Profile Management
 let currentProfile = localStorage.getItem('currentProfile') || 'hemank';
 let profileLocked = localStorage.getItem('profileLocked') === 'true';
@@ -23,32 +44,112 @@ const clearAllBtn = document.getElementById('clearAll');
 document.getElementById('incomeDate').valueAsDate = new Date();
 document.getElementById('expenseDate').valueAsDate = new Date();
 
+// Show PIN modal on page load if not authenticated
+if (!isAuthenticated || authenticatedProfile !== currentProfile) {
+    showPinModal();
+} else {
+    hidePinModal();
+}
+
+// PIN Modal Functions
+function showPinModal(targetProfile = null) {
+    pinModal.style.display = 'flex';
+    container.classList.add('locked');
+    pinProfileSelect.value = targetProfile || currentProfile;
+    pinInput.value = '';
+    pinError.style.display = 'none';
+    pinInput.focus();
+}
+
+function hidePinModal() {
+    pinModal.style.display = 'none';
+    container.classList.remove('locked');
+}
+
+function validatePin() {
+    const selectedProfile = pinProfileSelect.value;
+    const enteredPin = pinInput.value;
+    
+    if (enteredPin === PIN_CODES[selectedProfile]) {
+        // PIN is correct
+        isAuthenticated = true;
+        authenticatedProfile = selectedProfile;
+        sessionStorage.setItem('isAuthenticated', 'true');
+        sessionStorage.setItem('authenticatedProfile', selectedProfile);
+        
+        // Switch to the authenticated profile if different
+        if (currentProfile !== selectedProfile) {
+            switchProfile(selectedProfile);
+        } else {
+            // Just update the UI if staying on same profile
+            initializeProfile();
+        }
+        
+        hidePinModal();
+        showNotification(`✅ Accès autorisé au profil ${selectedProfile === 'hemank' ? 'Hemank' : 'Jullian'}`, 'success');
+    } else {
+        // PIN is incorrect
+        pinError.textContent = '❌ Code incorrect. Veuillez réessayer.';
+        pinError.style.display = 'block';
+        pinInput.value = '';
+        pinInput.focus();
+        
+        // Shake animation
+        pinInput.style.animation = 'shake 0.5s';
+        setTimeout(() => {
+            pinInput.style.animation = '';
+        }, 500);
+    }
+}
+
+// PIN Submit Event
+pinSubmit.addEventListener('click', validatePin);
+
+// Allow Enter key to submit PIN
+pinInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        validatePin();
+    }
+});
+
+// Update profile select in PIN modal
+pinProfileSelect.addEventListener('change', () => {
+    pinError.style.display = 'none';
+    pinInput.value = '';
+    pinInput.focus();
+});
+
 // Initialize profile
 initializeProfile();
 
 // Profile change handler
 profileSelect.addEventListener('change', (e) => {
-    // Once a profile is selected, lock it permanently for this session
-    if (profileLocked || currentProfile) {
-        showNotification('⚠️ Le profil est verrouillé. Rechargez la page pour changer de profil.', 'warning');
-        profileSelect.value = currentProfile;
-        return;
-    }
+    const newProfile = e.target.value;
     
-    switchProfile(e.target.value);
+    // If trying to switch to a different profile, require PIN authentication
+    if (newProfile !== currentProfile) {
+        // Reset to current profile first
+        profileSelect.value = currentProfile;
+        
+        // Show PIN modal for authentication with the new profile
+        showPinModal(newProfile);
+        showNotification('🔐 Code requis pour changer de profil', 'info');
+    }
 });
 
 // Initialize profile on load
 function initializeProfile() {
     profileSelect.value = currentProfile;
     
-    // Lock profile immediately after page load - each profile is isolated
-    profileLocked = true;
-    localStorage.setItem('profileLocked', 'true');
-    
-    // Show lock indicator
-    profileLockIndicator.style.display = 'inline-block';
-    profileSelect.disabled = true;
+    // Enable profile selector if authenticated
+    if (isAuthenticated && authenticatedProfile === currentProfile) {
+        profileSelect.disabled = false;
+        profileLockIndicator.style.display = 'none';
+    } else {
+        // Lock profile until authenticated
+        profileLockIndicator.style.display = 'inline-block';
+        profileSelect.disabled = true;
+    }
     
     updateHeaderProfileInfo();
 }
@@ -62,12 +163,16 @@ function switchProfile(newProfile) {
     currentProfile = newProfile;
     localStorage.setItem('currentProfile', newProfile);
     
-    // Lock profile immediately
-    profileLocked = true;
-    localStorage.setItem('profileLocked', 'true');
-    profileLockIndicator.style.display = 'inline-block';
-    profileSelect.disabled = true;
-    showNotification(`🔒 Profil ${newProfile === 'hemank' ? 'Hemank' : 'Jullian'} sélectionné et verrouillé`, 'info');
+    // Update authentication
+    authenticatedProfile = newProfile;
+    sessionStorage.setItem('authenticatedProfile', newProfile);
+    
+    // Update profile selector
+    profileSelect.value = newProfile;
+    profileSelect.disabled = false;
+    profileLockIndicator.style.display = 'none';
+    
+    showNotification(`✅ Profil ${newProfile === 'hemank' ? 'Hemank' : 'Jullian'} sélectionné`, 'success');
     
     // Load new profile's transactions and archives
     transactions = JSON.parse(localStorage.getItem(`transactions_${currentProfile}`)) || [];
