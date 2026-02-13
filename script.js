@@ -1,7 +1,13 @@
+// Profile Management
+let currentProfile = localStorage.getItem('currentProfile') || 'hemank';
+let profileLocked = localStorage.getItem('profileLocked') === 'true';
+
 // Données
-let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+let transactions = JSON.parse(localStorage.getItem(`transactions_${currentProfile}`)) || [];
 
 // Éléments du DOM
+const profileSelect = document.getElementById('profileSelect');
+const profileLockIndicator = document.getElementById('profileLockIndicator');
 const incomeForm = document.getElementById('incomeForm');
 const expenseForm = document.getElementById('expenseForm');
 const transactionsList = document.getElementById('transactionsList');
@@ -15,6 +21,71 @@ const clearAllBtn = document.getElementById('clearAll');
 // Initialiser la date d'aujourd'hui
 document.getElementById('incomeDate').valueAsDate = new Date();
 document.getElementById('expenseDate').valueAsDate = new Date();
+
+// Initialize profile
+initializeProfile();
+
+// Profile change handler
+profileSelect.addEventListener('change', (e) => {
+    if (profileLocked) {
+        showNotification('⚠️ Le profil est verrouillé. Vous ne pouvez pas le changer.', 'info');
+        profileSelect.value = currentProfile;
+        return;
+    }
+    
+    switchProfile(e.target.value);
+});
+
+// Initialize profile on load
+function initializeProfile() {
+    profileSelect.value = currentProfile;
+    
+    // Lock profile if Jullian is selected
+    if (currentProfile === 'jullian' && !profileLocked) {
+        profileLocked = true;
+        localStorage.setItem('profileLocked', 'true');
+    }
+    
+    // Show lock indicator if profile is locked
+    if (profileLocked) {
+        profileLockIndicator.style.display = 'inline-block';
+        profileSelect.disabled = true;
+    }
+    
+    updateHeaderProfileInfo();
+}
+
+// Switch profile
+function switchProfile(newProfile) {
+    // Save current transactions before switching
+    saveTransactions();
+    
+    // Update current profile
+    currentProfile = newProfile;
+    localStorage.setItem('currentProfile', newProfile);
+    
+    // Lock profile if switching to Jullian
+    if (newProfile === 'jullian') {
+        profileLocked = true;
+        localStorage.setItem('profileLocked', 'true');
+        profileLockIndicator.style.display = 'inline-block';
+        profileSelect.disabled = true;
+        showNotification('🔒 Profil Jullian sélectionné et verrouillé', 'info');
+    }
+    
+    // Load new profile's transactions
+    transactions = JSON.parse(localStorage.getItem(`transactions_${currentProfile}`)) || [];
+    
+    // Update UI
+    updateUI();
+    updateHeaderProfileInfo();
+}
+
+// Update header to show current profile info
+function updateHeaderProfileInfo() {
+    const profileName = currentProfile === 'hemank' ? 'Hemank (Individuel)' : 'Jullian (Partagé)';
+    document.querySelector('header p').textContent = `Gérez vos finances personnelles facilement - ${profileName}`;
+}
 
 // Ajouter un revenu
 incomeForm.addEventListener('submit', (e) => {
@@ -62,7 +133,7 @@ expenseForm.addEventListener('submit', (e) => {
 
 // Sauvegarder dans localStorage
 function saveTransactions() {
-    localStorage.setItem('transactions', JSON.stringify(transactions));
+    localStorage.setItem(`transactions_${currentProfile}`, JSON.stringify(transactions));
 }
 
 // Mettre à jour l'interface
