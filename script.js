@@ -4,6 +4,7 @@ let profileLocked = localStorage.getItem('profileLocked') === 'true';
 
 // Données
 let transactions = JSON.parse(localStorage.getItem(`transactions_${currentProfile}`)) || [];
+let archivedMonths = JSON.parse(localStorage.getItem(`archived_${currentProfile}`)) || [];
 
 // Éléments du DOM
 const profileSelect = document.getElementById('profileSelect');
@@ -27,8 +28,9 @@ initializeProfile();
 
 // Profile change handler
 profileSelect.addEventListener('change', (e) => {
-    if (profileLocked) {
-        showNotification('⚠️ Le profil est verrouillé. Vous ne pouvez pas le changer.', 'warning');
+    // Once a profile is selected, lock it permanently for this session
+    if (profileLocked || currentProfile) {
+        showNotification('⚠️ Le profil est verrouillé. Rechargez la page pour changer de profil.', 'warning');
         profileSelect.value = currentProfile;
         return;
     }
@@ -40,17 +42,13 @@ profileSelect.addEventListener('change', (e) => {
 function initializeProfile() {
     profileSelect.value = currentProfile;
     
-    // Lock profile if Jullian is selected
-    if (currentProfile === 'jullian' && !profileLocked) {
-        profileLocked = true;
-        localStorage.setItem('profileLocked', 'true');
-    }
+    // Lock profile immediately after page load - each profile is isolated
+    profileLocked = true;
+    localStorage.setItem('profileLocked', 'true');
     
-    // Show lock indicator if profile is locked
-    if (profileLocked) {
-        profileLockIndicator.style.display = 'inline-block';
-        profileSelect.disabled = true;
-    }
+    // Show lock indicator
+    profileLockIndicator.style.display = 'inline-block';
+    profileSelect.disabled = true;
     
     updateHeaderProfileInfo();
 }
@@ -64,17 +62,16 @@ function switchProfile(newProfile) {
     currentProfile = newProfile;
     localStorage.setItem('currentProfile', newProfile);
     
-    // Lock profile if switching to Jullian
-    if (newProfile === 'jullian') {
-        profileLocked = true;
-        localStorage.setItem('profileLocked', 'true');
-        profileLockIndicator.style.display = 'inline-block';
-        profileSelect.disabled = true;
-        showNotification('🔒 Profil Jullian sélectionné et verrouillé', 'info');
-    }
+    // Lock profile immediately
+    profileLocked = true;
+    localStorage.setItem('profileLocked', 'true');
+    profileLockIndicator.style.display = 'inline-block';
+    profileSelect.disabled = true;
+    showNotification(`🔒 Profil ${newProfile === 'hemank' ? 'Hemank' : 'Jullian'} sélectionné et verrouillé`, 'info');
     
-    // Load new profile's transactions
+    // Load new profile's transactions and archives
     transactions = JSON.parse(localStorage.getItem(`transactions_${currentProfile}`)) || [];
+    archivedMonths = JSON.parse(localStorage.getItem(`archived_${currentProfile}`)) || [];
     
     // Update UI
     updateUI();
@@ -142,6 +139,7 @@ function updateUI() {
     displayTransactions();
     updateCategoryFilter();
     updateExpenseChart();
+    updateMonthInfo();
 }
 
 // Mettre à jour le résumé
@@ -367,5 +365,216 @@ style.textContent = `
 `;
 document.head.appendChild(style);
 
+// Monthly Operations
+const archiveMonthBtn = document.getElementById('archiveMonth');
+const startNewMonthBtn = document.getElementById('startNewMonth');
+const viewArchivesBtn = document.getElementById('viewArchives');
+const archivesModal = document.getElementById('archivesModal');
+const closeModal = document.getElementById('closeModal');
+const currentMonthInfo = document.getElementById('currentMonthInfo');
+
+// Get current month and year
+function getCurrentMonthYear() {
+    const now = new Date();
+    const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                       'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+    return {
+        month: monthNames[now.getMonth()],
+        year: now.getFullYear(),
+        key: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    };
+}
+
+// Update month info display
+function updateMonthInfo() {
+    const { month, year } = getCurrentMonthYear();
+    const income = transactions
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + t.amount, 0);
+    const expense = transactions
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0);
+    
+    currentMonthInfo.innerHTML = `
+        📅 Mois en cours: <strong>${month} ${year}</strong> | 
+        💰 Revenus: <strong>${formatCurrency(income)}</strong> | 
+        💸 Dépenses: <strong>${formatCurrency(expense)}</strong> | 
+        📊 Transactions: <strong>${transactions.length}</strong>
+    `;
+}
+
+// Archive current month
+archiveMonthBtn.addEventListener('click', () => {
+    if (transactions.length === 0) {
+        showNotification('⚠️ Aucune transaction à sauvegarder pour ce mois', 'warning');
+        return;
+    }
+    
+    if (confirm('💾 Sauvegarder le mois en cours dans les archives?\nLes transactions actuelles resteront visibles.')) {
+        const { month, year, key } = getCurrentMonthYear();
+        
+        // Check if this month is already archived
+        const existingArchive = archivedMonths.find(a => a.key === key);
+        if (existingArchive) {
+            if (!confirm('⚠️ Ce mois a déjà été archivé. Voulez-vous le mettre à jour?')) {
+                return;
+            }
+            // Remove existing archive
+            archivedMonths = archivedMonths.filter(a => a.key !== key);
+        }
+        
+        const income = transactions
+            .filter(t => t.type === 'income')
+            .reduce((sum, t) => sum + t.amount, 0);
+        const expense = transactions
+            .filter(t => t.type === 'expense')
+            .reduce((sum, t) => sum + t.amount, 0);
+        
+        const archive = {
+            key: key,
+            month: month,
+            year: year,
+            archivedDate: new Date().toISOString(),
+            transactions: [...transactions],
+            summary: {
+                income: income,
+                expense: expense,
+                balance: income - expense,
+                transactionCount: transactions.length
+            }
+        };
+        
+        archivedMonths.unshift(archive);
+        localStorage.setItem(`archived_${currentProfile}`, JSON.stringify(archivedMonths));
+        
+        showNotification(`✅ Mois de ${month} ${year} sauvegardé avec succès!`, 'success');
+    }
+});
+
+// Start new month
+startNewMonthBtn.addEventListener('click', () => {
+    if (transactions.length === 0) {
+        showNotification('ℹ️ Aucune transaction à archiver. Vous pouvez commencer un nouveau mois directement.', 'info');
+        return;
+    }
+    
+    if (confirm('🆕 Démarrer un nouveau mois?\n\n⚠️ Cette action va:\n1. Sauvegarder le mois actuel dans les archives\n2. Effacer toutes les transactions actuelles\n3. Vous permettre de démarrer sur une base vierge\n\nContinuer?')) {
+        // First archive the current month
+        const { month, year, key } = getCurrentMonthYear();
+        
+        const income = transactions
+            .filter(t => t.type === 'income')
+            .reduce((sum, t) => sum + t.amount, 0);
+        const expense = transactions
+            .filter(t => t.type === 'expense')
+            .reduce((sum, t) => sum + t.amount, 0);
+        
+        const archive = {
+            key: key,
+            month: month,
+            year: year,
+            archivedDate: new Date().toISOString(),
+            transactions: [...transactions],
+            summary: {
+                income: income,
+                expense: expense,
+                balance: income - expense,
+                transactionCount: transactions.length
+            }
+        };
+        
+        // Remove existing archive for this month if any
+        archivedMonths = archivedMonths.filter(a => a.key !== key);
+        archivedMonths.unshift(archive);
+        localStorage.setItem(`archived_${currentProfile}`, JSON.stringify(archivedMonths));
+        
+        // Clear current transactions
+        transactions = [];
+        saveTransactions();
+        updateUI();
+        
+        showNotification(`🎉 Nouveau mois démarré! Le mois de ${month} ${year} a été archivé.`, 'success');
+    }
+});
+
+// View archives
+viewArchivesBtn.addEventListener('click', () => {
+    displayArchives();
+    archivesModal.style.display = 'block';
+});
+
+// Close modal
+closeModal.addEventListener('click', () => {
+    archivesModal.style.display = 'none';
+});
+
+// Close modal when clicking outside
+window.addEventListener('click', (event) => {
+    if (event.target === archivesModal) {
+        archivesModal.style.display = 'none';
+    }
+});
+
+// Display archives
+function displayArchives() {
+    const archivesList = document.getElementById('archivesList');
+    
+    if (archivedMonths.length === 0) {
+        archivesList.innerHTML = `
+            <div class="empty-state">
+                <h3>📭 Aucune archive</h3>
+                <p>Sauvegardez vos mois pour créer des archives</p>
+            </div>
+        `;
+        return;
+    }
+    
+    archivesList.innerHTML = archivedMonths.map(archive => {
+        const transactionsHTML = archive.transactions
+            .slice(0, 5)
+            .map(t => `
+                <div class="archive-transaction ${t.type}">
+                    <span>${t.category} - ${t.description}</span>
+                    <span>${t.type === 'income' ? '+' : '-'}${formatCurrency(t.amount)}</span>
+                </div>
+            `).join('');
+        
+        const moreCount = archive.transactions.length - 5;
+        
+        return `
+            <div class="archive-item">
+                <h3>📅 ${archive.month} ${archive.year}</h3>
+                <p style="color: #7f8c8d; font-size: 0.9em; margin-bottom: 10px;">
+                    Archivé le ${formatDate(archive.archivedDate.split('T')[0])}
+                </p>
+                <div class="archive-stats">
+                    <div class="archive-stat income">
+                        <div class="label">Revenus</div>
+                        <div class="value">${formatCurrency(archive.summary.income)}</div>
+                    </div>
+                    <div class="archive-stat expense">
+                        <div class="label">Dépenses</div>
+                        <div class="value">${formatCurrency(archive.summary.expense)}</div>
+                    </div>
+                    <div class="archive-stat balance">
+                        <div class="label">Solde</div>
+                        <div class="value">${formatCurrency(archive.summary.balance)}</div>
+                    </div>
+                    <div class="archive-stat">
+                        <div class="label">Transactions</div>
+                        <div class="value">${archive.summary.transactionCount}</div>
+                    </div>
+                </div>
+                <div class="archive-transactions">
+                    <h4>🔍 Aperçu des transactions:</h4>
+                    ${transactionsHTML}
+                    ${moreCount > 0 ? `<p style="text-align: center; color: #7f8c8d; margin-top: 10px;">... et ${moreCount} autre${moreCount > 1 ? 's' : ''} transaction${moreCount > 1 ? 's' : ''}</p>` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
 // Initialiser
 updateUI();
+updateMonthInfo();

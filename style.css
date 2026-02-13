@@ -539,6 +539,198 @@ header p {
     font-size: 1em;
 }
 
+/* Monthly Operations */
+.monthly-operations {
+    background: linear-gradient(145deg, #ffffff, #f0f0f0);
+    padding: 25px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.monthly-operations h2 {
+    color: #2c3e50;
+    margin-bottom: 20px;
+    font-size: 1.5em;
+}
+
+.monthly-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.btn-archive {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-archive:hover {
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-new-month {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+
+.btn-new-month:hover {
+    box-shadow: 0 5px 15px rgba(240, 147, 251, 0.4);
+}
+
+.btn-view-archives {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+}
+
+.btn-view-archives:hover {
+    box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
+}
+
+.month-info {
+    margin-top: 15px;
+    padding: 15px;
+    background: rgba(102, 126, 234, 0.1);
+    border-radius: 8px;
+    color: #2c3e50;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+    background: white;
+    margin: 5% auto;
+    padding: 30px;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.close-modal {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.close-modal:hover,
+.close-modal:focus {
+    color: #000;
+}
+
+.archive-item {
+    background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+    padding: 20px;
+    margin-bottom: 15px;
+    border-radius: 12px;
+    border-left: 5px solid #667eea;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+}
+
+.archive-item h3 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+    font-size: 1.3em;
+}
+
+.archive-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.archive-stat {
+    padding: 10px;
+    background: white;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.archive-stat .label {
+    font-size: 0.85em;
+    color: #7f8c8d;
+    margin-bottom: 5px;
+}
+
+.archive-stat .value {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #2c3e50;
+}
+
+.archive-stat.income .value {
+    color: #27ae60;
+}
+
+.archive-stat.expense .value {
+    color: #e74c3c;
+}
+
+.archive-stat.balance .value {
+    color: #667eea;
+}
+
+.archive-transactions {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 2px solid #e0e0e0;
+}
+
+.archive-transactions h4 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+    font-size: 1em;
+}
+
+.archive-transaction {
+    padding: 10px;
+    margin-bottom: 8px;
+    background: white;
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9em;
+}
+
+.archive-transaction.income {
+    border-left: 3px solid #27ae60;
+}
+
+.archive-transaction.expense {
+    border-left: 3px solid #e74c3c;
+}
+
 /* Transactions */
 .transactions {
     margin-bottom: 30px;
@@ -661,9 +853,23 @@ header p {
         width: 100%;
     }
     
+    .monthly-controls {
+        grid-template-columns: 1fr;
+    }
+    
     .transaction-item {
         flex-direction: column;
         text-align: center;
         gap: 10px;
+    }
+    
+    .modal-content {
+        width: 95%;
+        margin: 10% auto;
+        padding: 20px;
+    }
+    
+    .archive-stats {
+        grid-template-columns: 1fr 1fr;
     }
 }

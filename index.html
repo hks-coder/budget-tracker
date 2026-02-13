@@ -122,6 +122,26 @@
             </div>
         </section>
 
+        <!-- Monthly Operations -->
+        <section class="monthly-operations">
+            <h2>📅 Gestion Mensuelle</h2>
+            <div class="monthly-controls">
+                <button class="btn btn-archive" id="archiveMonth">💾 Sauvegarder le Mois en Cours</button>
+                <button class="btn btn-new-month" id="startNewMonth">🆕 Démarrer un Nouveau Mois</button>
+                <button class="btn btn-view-archives" id="viewArchives">📚 Voir les Archives</button>
+            </div>
+            <div id="currentMonthInfo" class="month-info"></div>
+        </section>
+
+        <!-- Archives Modal -->
+        <div id="archivesModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close-modal" id="closeModal">&times;</span>
+                <h2>📚 Archives Mensuelles</h2>
+                <div id="archivesList"></div>
+            </div>
+        </div>
+
         <!-- Liste des transactions -->
         <section class="transactions">
             <div id="transactionsList"></div>
