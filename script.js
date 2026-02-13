@@ -70,6 +70,7 @@ function updateUI() {
     updateSummary();
     displayTransactions();
     updateCategoryFilter();
+    updateExpenseChart();
 }
 
 // Mettre à jour le résumé
@@ -180,6 +181,75 @@ function formatCurrency(amount) {
 function formatDate(dateString) {
     const options = { year: 'numeric', month: 'long', day: 'numeric' };
     return new Date(dateString).toLocaleDateString('fr-FR', options);
+}
+
+// Graphique des dépenses par catégorie
+function updateExpenseChart() {
+    const chartSection = document.querySelector('.chart-section');
+    if (!chartSection) return;
+    
+    // Calculer les dépenses par catégorie
+    const expensesByCategory = {};
+    transactions
+        .filter(t => t.type === 'expense')
+        .forEach(t => {
+            if (expensesByCategory[t.category]) {
+                expensesByCategory[t.category] += t.amount;
+            } else {
+                expensesByCategory[t.category] = t.amount;
+            }
+        });
+    
+    const categories = Object.keys(expensesByCategory);
+    const totalExpenses = Object.values(expensesByCategory).reduce((a, b) => a + b, 0);
+    
+    // Si aucune dépense, afficher un message
+    if (categories.length === 0) {
+        chartSection.innerHTML = `
+            <h2>📈 Dépenses par Catégorie</h2>
+            <div style="text-align: center; padding: 40px; color: #7f8c8d;">
+                <p style="font-size: 1.2em;">Aucune dépense pour le moment</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Couleurs pour les barres
+    const colors = [
+        '#FF6384',
+        '#36A2EB',
+        '#FFCE56',
+        '#4BC0C0',
+        '#9966FF',
+        '#FF9F40',
+        '#E74C3C',
+        '#3498DB',
+        '#2ECC71'
+    ];
+    
+    // Créer le graphique en barres HTML/CSS
+    let chartHTML = '<h2>📈 Dépenses par Catégorie</h2><div style="padding: 20px;">';
+    
+    categories.forEach((category, index) => {
+        const amount = expensesByCategory[category];
+        const percentage = ((amount / totalExpenses) * 100).toFixed(1);
+        const color = colors[index % colors.length];
+        
+        chartHTML += `
+            <div style="margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="font-weight: 600; color: #2c3e50;">${category}</span>
+                    <span style="color: #7f8c8d;">${formatCurrency(amount)} (${percentage}%)</span>
+                </div>
+                <div style="background: #e0e0e0; border-radius: 10px; height: 25px; overflow: hidden;">
+                    <div style="background: ${color}; height: 100%; width: ${percentage}%; border-radius: 10px; transition: width 0.5s ease;"></div>
+                </div>
+            </div>
+        `;
+    });
+    
+    chartHTML += '</div>';
+    chartSection.innerHTML = chartHTML;
 }
 
 // Notification
