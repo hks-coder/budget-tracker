@@ -28,7 +28,7 @@ initializeProfile();
 // Profile change handler
 profileSelect.addEventListener('change', (e) => {
     if (profileLocked) {
-        showNotification('⚠️ Le profil est verrouillé. Vous ne pouvez pas le changer.', 'info');
+        showNotification('⚠️ Le profil est verrouillé. Vous ne pouvez pas le changer.', 'warning');
         profileSelect.value = currentProfile;
         return;
     }
@@ -326,11 +326,16 @@ function updateExpenseChart() {
 // Notification
 function showNotification(message, type) {
     const notification = document.createElement('div');
+    const colors = {
+        success: '#27ae60',
+        info: '#3498db',
+        warning: '#f39c12'
+    };
     notification.style.cssText = `
         position: fixed;
         top: 20px;
         right: 20px;
-        background: ${type === 'success' ? '#27ae60' : '#3498db'};
+        background: ${colors[type] || colors.info};
         color: white;
         padding: 15px 25px;
         border-radius: 8px;
