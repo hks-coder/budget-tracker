@@ -1,4 +1,7 @@
 // PIN Codes for profiles
+// NOTE: These PINs are stored client-side for convenience/privacy protection only.
+// They are visible in the source code and should not be considered secure.
+// For true security, a server-side authentication system would be required.
 const PIN_CODES = {
     'hemank': '1994',
     'jullian': '1991'
@@ -131,17 +134,7 @@ profileSelect.addEventListener('change', (e) => {
         // Show PIN modal for authentication with the new profile
         showPinModal(newProfile);
         showNotification('🔐 Code requis pour changer de profil', 'info');
-        return;
     }
-    
-    // Once a profile is selected, lock it permanently for this session
-    if (profileLocked || currentProfile) {
-        showNotification('⚠️ Le profil est verrouillé. Rechargez la page pour changer de profil.', 'warning');
-        profileSelect.value = currentProfile;
-        return;
-    }
-    
-    switchProfile(e.target.value);
 });
 
 // Initialize profile on load
