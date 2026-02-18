@@ -230,11 +230,11 @@ incomeForm.addEventListener('submit', (e) => {
 expenseForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
-    let categoryValue = document.getElementById('expenseCategory').value;
+    let categoryValue = expenseCategory.value;
     
     // If custom category is selected, use the custom input value
     if (categoryValue === 'custom') {
-        categoryValue = document.getElementById('customCategory').value.trim();
+        categoryValue = customCategory.value.trim();
         if (!categoryValue) {
             showNotification('⚠️ Veuillez entrer un nom de catégorie', 'warning');
             return;
