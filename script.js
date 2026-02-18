@@ -552,6 +552,60 @@ function updateExpenseChart() {
     
     chartHTML += '</div>';
     
+    // Add vertical bar chart
+    chartHTML += '<div style="margin-top: 50px; padding-top: 30px; border-top: 2px solid #e0e0e0;">';
+    chartHTML += '<h2 style="text-align: center; color: #2c3e50; margin-bottom: 30px;">📊 Graphique Vertical des Dépenses</h2>';
+    
+    // Find the maximum amount for scaling
+    const maxAmount = Math.max(...Object.values(expensesByCategory));
+    
+    // Constants for bar chart styling
+    const MIN_BAR_HEIGHT = 60; // Minimum height in pixels to ensure labels are readable
+    
+    // Create vertical bar chart
+    chartHTML += '<div style="display: flex; align-items: flex-end; justify-content: space-around; height: 400px; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); gap: 15px;">';
+    
+    // Note: segment.color comes from a predefined colors array (lines 421-434), ensuring safety
+    pieSegments.forEach((segment, index) => {
+        const barHeight = (segment.amount / maxAmount) * 100;
+        
+        chartHTML += `
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; max-width: 120px;">
+                <div style="width: 100%; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 350px;">
+                    <div class="vertical-bar" style="
+                        position: absolute;
+                        bottom: 0;
+                        width: 100%;
+                        text-align: center;
+                        font-weight: bold;
+                        color: white;
+                        padding: 10px 5px;
+                        font-size: 0.9em;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: flex-end;
+                        background: linear-gradient(to top, ${segment.color}, ${segment.color}dd);
+                        border-radius: 8px 8px 0 0;
+                        transition: all 0.3s ease;
+                        cursor: pointer;
+                        height: ${barHeight}%;
+                        min-height: ${MIN_BAR_HEIGHT}px;
+                    ">
+                        <div style="margin-top: auto; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">${formatCurrency(segment.amount)}</div>
+                        <div style="font-size: 0.8em; margin-top: 5px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">${segment.percentage}%</div>
+                    </div>
+                </div>
+                <div style="margin-top: 10px; font-weight: 600; color: #2c3e50; text-align: center; font-size: 0.85em; word-wrap: break-word; max-width: 100%;">
+                    ${segment.category}
+                </div>
+            </div>
+        `;
+    });
+    
+    chartHTML += '</div>';
+    chartHTML += '</div>';
+    
     // Add button to view details
     chartHTML += `
         <div style="text-align: center; margin-top: 20px;">
