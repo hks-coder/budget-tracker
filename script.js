@@ -913,14 +913,10 @@ function displayArchives() {
         
         // Header with delete button
         const headerDiv = document.createElement('div');
-        headerDiv.style.display = 'flex';
-        headerDiv.style.justifyContent = 'space-between';
-        headerDiv.style.alignItems = 'center';
-        headerDiv.style.marginBottom = '10px';
+        headerDiv.className = 'archive-header';
         
         const h3 = document.createElement('h3');
         h3.textContent = `📅 ${archive.month} ${archive.year}`;
-        h3.style.margin = '0';
         
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'delete-btn';
