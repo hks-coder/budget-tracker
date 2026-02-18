@@ -559,16 +559,20 @@ function updateExpenseChart() {
     // Find the maximum amount for scaling
     const maxAmount = Math.max(...Object.values(expensesByCategory));
     
+    // Constants for bar chart styling
+    const MIN_BAR_HEIGHT = 60; // Minimum height in pixels to ensure labels are readable
+    
     // Create vertical bar chart
     chartHTML += '<div style="display: flex; align-items: flex-end; justify-content: space-around; height: 400px; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); gap: 15px;">';
     
+    // Note: segment.color comes from a predefined colors array (lines 421-434), ensuring safety
     pieSegments.forEach((segment, index) => {
         const barHeight = (segment.amount / maxAmount) * 100;
         
         chartHTML += `
             <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; max-width: 120px;">
                 <div style="width: 100%; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 350px;">
-                    <div style="
+                    <div class="vertical-bar" style="
                         position: absolute;
                         bottom: 0;
                         width: 100%;
@@ -586,8 +590,8 @@ function updateExpenseChart() {
                         transition: all 0.3s ease;
                         cursor: pointer;
                         height: ${barHeight}%;
-                        min-height: 60px;
-                    " onmouseover="this.style.opacity='0.8'; this.style.transform='translateY(-5px)'" onmouseout="this.style.opacity='1'; this.style.transform='translateY(0)'">
+                        min-height: ${MIN_BAR_HEIGHT}px;
+                    ">
                         <div style="margin-top: auto; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">${formatCurrency(segment.amount)}</div>
                         <div style="font-size: 0.8em; margin-top: 5px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">${segment.percentage}%</div>
                     </div>
