@@ -23,9 +23,22 @@ let authenticatedProfile = sessionStorage.getItem('authenticatedProfile');
 let currentProfile = localStorage.getItem('currentProfile') || 'hemank';
 let profileLocked = localStorage.getItem('profileLocked') === 'true';
 
+// Safe localStorage data loading with error handling
+function safeLoadFromStorage(key, defaultValue = []) {
+    try {
+        const data = localStorage.getItem(key);
+        if (!data) return defaultValue;
+        return JSON.parse(data);
+    } catch (error) {
+        console.error(`Error loading data from localStorage key "${key}":`, error);
+        showNotification(`⚠️ Erreur lors du chargement des données. Utilisation des valeurs par défaut.`, 'warning');
+        return defaultValue;
+    }
+}
+
 // Données
-let transactions = JSON.parse(localStorage.getItem(`transactions_${currentProfile}`)) || [];
-let archivedMonths = JSON.parse(localStorage.getItem(`archived_${currentProfile}`)) || [];
+let transactions = safeLoadFromStorage(`transactions_${currentProfile}`, []);
+let archivedMonths = safeLoadFromStorage(`archived_${currentProfile}`, []);
 
 // Éléments du DOM
 const profileSelect = document.getElementById('profileSelect');
@@ -190,8 +203,8 @@ function switchProfile(newProfile) {
     showNotification(`✅ Profil ${newProfile === 'hemank' ? 'Hemank' : 'Jullian'} sélectionné`, 'success');
     
     // Load new profile's transactions and archives
-    transactions = JSON.parse(localStorage.getItem(`transactions_${currentProfile}`)) || [];
-    archivedMonths = JSON.parse(localStorage.getItem(`archived_${currentProfile}`)) || [];
+    transactions = safeLoadFromStorage(`transactions_${currentProfile}`, []);
+    archivedMonths = safeLoadFromStorage(`archived_${currentProfile}`, []);
     
     // Update UI
     updateUI();
@@ -208,13 +221,49 @@ function updateHeaderProfileInfo() {
 incomeForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
+    const amount = parseFloat(document.getElementById('incomeAmount').value);
+    const category = document.getElementById('incomeCategory').value;
+    const description = document.getElementById('incomeDescription').value.trim();
+    const date = document.getElementById('incomeDate').value;
+    
+    // Input validation
+    if (isNaN(amount) || amount <= 0) {
+        showNotification('⚠️ Veuillez entrer un montant valide (supérieur à 0)', 'warning');
+        return;
+    }
+    
+    if (amount > 999999999) {
+        showNotification('⚠️ Le montant est trop élevé', 'warning');
+        return;
+    }
+    
+    if (!category) {
+        showNotification('⚠️ Veuillez sélectionner une catégorie', 'warning');
+        return;
+    }
+    
+    if (!description || description.length === 0) {
+        showNotification('⚠️ Veuillez entrer une description', 'warning');
+        return;
+    }
+    
+    if (description.length > 200) {
+        showNotification('⚠️ La description est trop longue (maximum 200 caractères)', 'warning');
+        return;
+    }
+    
+    if (!date) {
+        showNotification('⚠️ Veuillez sélectionner une date', 'warning');
+        return;
+    }
+    
     const transaction = {
         id: Date.now(),
         type: 'income',
-        amount: parseFloat(document.getElementById('incomeAmount').value),
-        category: document.getElementById('incomeCategory').value,
-        description: document.getElementById('incomeDescription').value,
-        date: document.getElementById('incomeDate').value
+        amount: amount,
+        category: category,
+        description: description,
+        date: date
     };
     
     transactions.push(transaction);
@@ -231,6 +280,20 @@ expenseForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
     let categoryValue = expenseCategory.value;
+    const amount = parseFloat(document.getElementById('expenseAmount').value);
+    const description = document.getElementById('expenseDescription').value.trim();
+    const date = document.getElementById('expenseDate').value;
+    
+    // Input validation
+    if (isNaN(amount) || amount <= 0) {
+        showNotification('⚠️ Veuillez entrer un montant valide (supérieur à 0)', 'warning');
+        return;
+    }
+    
+    if (amount > 999999999) {
+        showNotification('⚠️ Le montant est trop élevé', 'warning');
+        return;
+    }
     
     // If custom category is selected, use the custom input value
     if (categoryValue === 'custom') {
@@ -239,15 +302,39 @@ expenseForm.addEventListener('submit', (e) => {
             showNotification('⚠️ Veuillez entrer un nom de catégorie', 'warning');
             return;
         }
+        if (categoryValue.length > 50) {
+            showNotification('⚠️ Le nom de catégorie est trop long (maximum 50 caractères)', 'warning');
+            return;
+        }
+    }
+    
+    if (!categoryValue) {
+        showNotification('⚠️ Veuillez sélectionner une catégorie', 'warning');
+        return;
+    }
+    
+    if (!description || description.length === 0) {
+        showNotification('⚠️ Veuillez entrer une description', 'warning');
+        return;
+    }
+    
+    if (description.length > 200) {
+        showNotification('⚠️ La description est trop longue (maximum 200 caractères)', 'warning');
+        return;
+    }
+    
+    if (!date) {
+        showNotification('⚠️ Veuillez sélectionner une date', 'warning');
+        return;
     }
     
     const transaction = {
         id: Date.now(),
         type: 'expense',
-        amount: parseFloat(document.getElementById('expenseAmount').value),
+        amount: amount,
         category: categoryValue,
-        description: document.getElementById('expenseDescription').value,
-        date: document.getElementById('expenseDate').value
+        description: description,
+        date: date
     };
     
     transactions.push(transaction);
@@ -293,6 +380,13 @@ function updateSummary() {
     totalBalance.textContent = formatCurrency(balance);
 }
 
+// Helper function to escape HTML and prevent XSS
+function escapeHtml(unsafe) {
+    const div = document.createElement('div');
+    div.textContent = unsafe;
+    return div.innerHTML;
+}
+
 // Afficher les transactions
 function displayTransactions() {
     const typeFilter = filterType.value;
@@ -321,21 +415,50 @@ function displayTransactions() {
         return;
     }
     
-    transactionsList.innerHTML = filtered.map(transaction => `
-        <div class="transaction-item ${transaction.type}">
-            <div class="transaction-info">
-                <h4>${transaction.category}</h4>
-                <p>${transaction.description}</p>
-                <p style="font-size: 0.85em; color: #999;">${formatDate(transaction.date)}</p>
-            </div>
-            <div class="transaction-amount">
-                ${transaction.type === 'income' ? '+' : '-'}${formatCurrency(transaction.amount)}
-            </div>
-            <button class="delete-btn" onclick="deleteTransaction(${transaction.id})">
-                🗑️
-            </button>
-        </div>
-    `).join('');
+    // Clear existing transactions
+    transactionsList.innerHTML = '';
+    
+    // Create transaction elements using DOM manipulation to prevent XSS
+    filtered.forEach(transaction => {
+        const transactionDiv = document.createElement('div');
+        transactionDiv.className = `transaction-item ${transaction.type}`;
+        
+        // Transaction info
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'transaction-info';
+        
+        const categoryH4 = document.createElement('h4');
+        categoryH4.textContent = transaction.category;
+        infoDiv.appendChild(categoryH4);
+        
+        const descriptionP = document.createElement('p');
+        descriptionP.textContent = transaction.description;
+        infoDiv.appendChild(descriptionP);
+        
+        const dateP = document.createElement('p');
+        dateP.style.fontSize = '0.85em';
+        dateP.style.color = '#999';
+        dateP.textContent = formatDate(transaction.date);
+        infoDiv.appendChild(dateP);
+        
+        // Transaction amount
+        const amountDiv = document.createElement('div');
+        amountDiv.className = 'transaction-amount';
+        amountDiv.textContent = `${transaction.type === 'income' ? '+' : '-'}${formatCurrency(transaction.amount)}`;
+        
+        // Delete button
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.textContent = '🗑️';
+        deleteBtn.addEventListener('click', () => deleteTransaction(transaction.id));
+        
+        // Assemble transaction item
+        transactionDiv.appendChild(infoDiv);
+        transactionDiv.appendChild(amountDiv);
+        transactionDiv.appendChild(deleteBtn);
+        
+        transactionsList.appendChild(transactionDiv);
+    });
 }
 
 // Supprimer une transaction
@@ -362,9 +485,19 @@ clearAllBtn.addEventListener('click', () => {
 function updateCategoryFilter() {
     const categories = [...new Set(transactions.map(t => t.category))];
     
-    filterCategory.innerHTML = '<option value="all">Toutes les catégories</option>';
+    // Clear and rebuild options using DOM manipulation
+    filterCategory.innerHTML = '';
+    
+    const allOption = document.createElement('option');
+    allOption.value = 'all';
+    allOption.textContent = 'Toutes les catégories';
+    filterCategory.appendChild(allOption);
+    
     categories.forEach(cat => {
-        filterCategory.innerHTML += `<option value="${cat}">${cat}</option>`;
+        const option = document.createElement('option');
+        option.value = cat;
+        option.textContent = cat;
+        filterCategory.appendChild(option);
     });
 }
 
@@ -846,50 +979,108 @@ function displayArchives() {
         return;
     }
     
-    archivesList.innerHTML = archivedMonths.map(archive => {
-        const transactionsHTML = archive.transactions
-            .slice(0, MAX_PREVIEW_TRANSACTIONS)
-            .map(t => `
-                <div class="archive-transaction ${t.type}">
-                    <span>${t.category} - ${t.description}</span>
-                    <span>${t.type === 'income' ? '+' : '-'}${formatCurrency(t.amount)}</span>
-                </div>
-            `).join('');
+    // Clear existing content
+    archivesList.innerHTML = '';
+    
+    archivedMonths.forEach(archive => {
+        const archiveItem = document.createElement('div');
+        archiveItem.className = 'archive-item';
         
-        const moreCount = archive.transactions.length - MAX_PREVIEW_TRANSACTIONS;
+        // Header
+        const h3 = document.createElement('h3');
+        h3.textContent = `📅 ${archive.month} ${archive.year}`;
+        archiveItem.appendChild(h3);
         
-        return `
-            <div class="archive-item">
-                <h3>📅 ${archive.month} ${archive.year}</h3>
-                <p style="color: #7f8c8d; font-size: 0.9em; margin-bottom: 10px;">
-                    Archivé le ${new Date(archive.archivedDate).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
-                </p>
-                <div class="archive-stats">
-                    <div class="archive-stat income">
-                        <div class="label">Revenus</div>
-                        <div class="value">${formatCurrency(archive.summary.income)}</div>
-                    </div>
-                    <div class="archive-stat expense">
-                        <div class="label">Dépenses</div>
-                        <div class="value">${formatCurrency(archive.summary.expense)}</div>
-                    </div>
-                    <div class="archive-stat balance">
-                        <div class="label">Solde</div>
-                        <div class="value">${formatCurrency(archive.summary.balance)}</div>
-                    </div>
-                    <div class="archive-stat">
-                        <div class="label">Transactions</div>
-                        <div class="value">${archive.summary.transactionCount}</div>
-                    </div>
-                </div>
-                <div class="archive-transactions">
-                    <h4>🔍 Aperçu des transactions:</h4>
-                    ${transactionsHTML}
-                    ${moreCount > 0 ? `<p style="text-align: center; color: #7f8c8d; margin-top: 10px;">... et ${moreCount} autre${moreCount > 1 ? 's' : ''} transaction${moreCount > 1 ? 's' : ''}</p>` : ''}
-                </div>
-            </div>
+        // Archive date
+        const dateP = document.createElement('p');
+        dateP.style.color = '#7f8c8d';
+        dateP.style.fontSize = '0.9em';
+        dateP.style.marginBottom = '10px';
+        dateP.textContent = `Archivé le ${new Date(archive.archivedDate).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}`;
+        archiveItem.appendChild(dateP);
+        
+        // Stats
+        const statsDiv = document.createElement('div');
+        statsDiv.className = 'archive-stats';
+        
+        // Income stat
+        const incomeStat = document.createElement('div');
+        incomeStat.className = 'archive-stat income';
+        incomeStat.innerHTML = `
+            <div class="label">Revenus</div>
+            <div class="value">${formatCurrency(archive.summary.income)}</div>
         `;
-    }).join('');
+        statsDiv.appendChild(incomeStat);
+        
+        // Expense stat
+        const expenseStat = document.createElement('div');
+        expenseStat.className = 'archive-stat expense';
+        expenseStat.innerHTML = `
+            <div class="label">Dépenses</div>
+            <div class="value">${formatCurrency(archive.summary.expense)}</div>
+        `;
+        statsDiv.appendChild(expenseStat);
+        
+        // Balance stat
+        const balanceStat = document.createElement('div');
+        balanceStat.className = 'archive-stat balance';
+        balanceStat.innerHTML = `
+            <div class="label">Solde</div>
+            <div class="value">${formatCurrency(archive.summary.balance)}</div>
+        `;
+        statsDiv.appendChild(balanceStat);
+        
+        // Transaction count stat
+        const countStat = document.createElement('div');
+        countStat.className = 'archive-stat';
+        countStat.innerHTML = `
+            <div class="label">Transactions</div>
+            <div class="value">${archive.summary.transactionCount}</div>
+        `;
+        statsDiv.appendChild(countStat);
+        
+        archiveItem.appendChild(statsDiv);
+        
+        // Transactions preview
+        const transactionsDiv = document.createElement('div');
+        transactionsDiv.className = 'archive-transactions';
+        
+        const transH4 = document.createElement('h4');
+        transH4.textContent = '🔍 Aperçu des transactions:';
+        transactionsDiv.appendChild(transH4);
+        
+        // Add transaction previews
+        archive.transactions
+            .slice(0, MAX_PREVIEW_TRANSACTIONS)
+            .forEach(t => {
+                const transDiv = document.createElement('div');
+                transDiv.className = `archive-transaction ${t.type}`;
+                
+                const descSpan = document.createElement('span');
+                descSpan.textContent = `${t.category} - ${t.description}`;
+                transDiv.appendChild(descSpan);
+                
+                const amountSpan = document.createElement('span');
+                amountSpan.textContent = `${t.type === 'income' ? '+' : '-'}${formatCurrency(t.amount)}`;
+                transDiv.appendChild(amountSpan);
+                
+                transactionsDiv.appendChild(transDiv);
+            });
+        
+        // More count if needed
+        const moreCount = archive.transactions.length - MAX_PREVIEW_TRANSACTIONS;
+        if (moreCount > 0) {
+            const moreP = document.createElement('p');
+            moreP.style.textAlign = 'center';
+            moreP.style.color = '#7f8c8d';
+            moreP.style.marginTop = '10px';
+            moreP.textContent = `... et ${moreCount} autre${moreCount > 1 ? 's' : ''} transaction${moreCount > 1 ? 's' : ''}`;
+            transactionsDiv.appendChild(moreP);
+        }
+        
+        archiveItem.appendChild(transactionsDiv);
+        archivesList.appendChild(archiveItem);
+    });
 }
 
 // Initialiser
