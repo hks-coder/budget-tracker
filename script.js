@@ -1484,7 +1484,9 @@ function importProfileData() {
                 const importedData = JSON.parse(text);
                 
                 // Validate the imported data structure
-                if (!importedData.profile || !importedData.transactions || !importedData.archivedMonths) {
+                if (!importedData.profile || 
+                    !Array.isArray(importedData.transactions) || 
+                    !Array.isArray(importedData.archivedMonths)) {
                     throw new Error('Format de fichier invalide');
                 }
                 
@@ -1497,11 +1499,11 @@ function importProfileData() {
                     return;
                 }
                 
-                // Import the data
-                transactions = importedData.transactions || [];
-                archivedMonths = importedData.archivedMonths || [];
-                customFields = importedData.customFields || [];
-                customFieldValues = importedData.customFieldValues || {};
+                // Import the data with proper defaults
+                transactions = importedData.transactions;
+                archivedMonths = importedData.archivedMonths;
+                customFields = Array.isArray(importedData.customFields) ? importedData.customFields : [];
+                customFieldValues = typeof importedData.customFieldValues === 'object' ? importedData.customFieldValues : {};
                 
                 // Save to localStorage
                 saveTransactions();
