@@ -1324,8 +1324,8 @@ function exportArchiveToExcel(archive) {
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         
-        // Sanitize filename
-        const safeMonth = archive.month.replace(/[^a-zA-Z0-9_\-]/g, '_');
+        // Sanitize filename (no hyphens to avoid command-line flag issues)
+        const safeMonth = archive.month.replace(/[^a-zA-Z0-9_]/g, '_');
         const safeYear = archive.year;
         
         link.setAttribute('href', url);
@@ -1335,7 +1335,7 @@ function exportArchiveToExcel(archive) {
         link.click();
         document.body.removeChild(link);
         
-        showNotification(`✅ Archive exportée: Budget_${archive.month}_${archive.year}.csv`, 'success');
+        showNotification(`✅ Archive exportée: Budget_${safeMonth}_${safeYear}.csv`, 'success');
     } catch (error) {
         console.error('Error exporting archive:', error);
         showNotification('❌ Erreur lors de l\'exportation', 'error');
@@ -1384,8 +1384,8 @@ function exportAllArchivesToExcel() {
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         
-        // Sanitize profile name for filename
-        const safeProfile = currentProfile.replace(/[^a-zA-Z0-9_\-]/g, '_');
+        // Sanitize profile name for filename (no hyphens to avoid command-line flag issues)
+        const safeProfile = currentProfile.replace(/[^a-zA-Z0-9_]/g, '_');
         
         link.setAttribute('href', url);
         link.setAttribute('download', `Budget_Toutes_Archives_${safeProfile}.csv`);
