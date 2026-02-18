@@ -817,6 +817,10 @@ const closeChartDetailsModal = document.getElementById('closeChartDetailsModal')
 // Constants
 const MAX_PREVIEW_TRANSACTIONS = 5;
 
+// Custom fields data
+let customFields = safeLoadFromStorage(`customFields_${currentProfile}`, []);
+let customFieldValues = safeLoadFromStorage(`customFieldValues_${currentProfile}`, {});
+
 // Get current month and year
 function getCurrentMonthYear() {
     const now = new Date();
@@ -1083,6 +1087,262 @@ function displayArchives() {
     });
 }
 
+// Custom Fields Management
+customizeFieldsBtn.addEventListener('click', () => {
+    displayCustomFieldsModal();
+    customFieldsModal.style.display = 'block';
+});
+
+closeCustomFieldsModal.addEventListener('click', () => {
+    customFieldsModal.style.display = 'none';
+});
+
+function displayCustomFieldsModal() {
+    const customFieldsList = document.getElementById('customFieldsList');
+    customFieldsList.innerHTML = '';
+    
+    if (customFields.length === 0) {
+        const emptyDiv = document.createElement('div');
+        emptyDiv.className = 'empty-state';
+        const emptyP = document.createElement('p');
+        emptyP.textContent = 'Aucun champ personnalisé défini. Ajoutez-en un ci-dessous.';
+        emptyDiv.appendChild(emptyP);
+        customFieldsList.appendChild(emptyDiv);
+        return;
+    }
+    
+    customFields.forEach((field, index) => {
+        const fieldDiv = document.createElement('div');
+        fieldDiv.className = 'custom-field-item';
+        fieldDiv.style.cssText = 'padding: 15px; margin-bottom: 10px; background: #f8f9fa; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;';
+        
+        const infoDiv = document.createElement('div');
+        
+        const fieldName = document.createElement('strong');
+        fieldName.textContent = field.name;
+        fieldName.style.display = 'block';
+        infoDiv.appendChild(fieldName);
+        
+        const fieldType = document.createElement('small');
+        fieldType.textContent = `Type: ${field.type}`;
+        fieldType.style.color = '#7f8c8d';
+        infoDiv.appendChild(fieldType);
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = '🗑️ Supprimer';
+        deleteBtn.className = 'btn';
+        deleteBtn.style.cssText = 'background: #e74c3c; color: white; padding: 5px 10px; font-size: 0.9em;';
+        deleteBtn.addEventListener('click', () => removeCustomField(index));
+        
+        fieldDiv.appendChild(infoDiv);
+        fieldDiv.appendChild(deleteBtn);
+        customFieldsList.appendChild(fieldDiv);
+    });
+}
+
+function removeCustomField(index) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce champ personnalisé?')) {
+        const fieldName = customFields[index].name;
+        customFields.splice(index, 1);
+        delete customFieldValues[fieldName];
+        saveCustomFields();
+        displayCustomFieldsModal();
+        displayCustomFieldsValues();
+        showNotification('Champ supprimé avec succès', 'success');
+    }
+}
+
+addCustomFieldBtn.addEventListener('click', () => {
+    const fieldName = document.getElementById('newFieldName').value.trim();
+    const fieldType = document.getElementById('newFieldType').value;
+    
+    if (!fieldName) {
+        showNotification('⚠️ Veuillez entrer un nom de champ', 'warning');
+        return;
+    }
+    
+    if (fieldName.length > 50) {
+        showNotification('⚠️ Le nom du champ est trop long (maximum 50 caractères)', 'warning');
+        return;
+    }
+    
+    // Check if field already exists
+    if (customFields.some(f => f.name === fieldName)) {
+        showNotification('⚠️ Un champ avec ce nom existe déjà', 'warning');
+        return;
+    }
+    
+    customFields.push({ name: fieldName, type: fieldType });
+    customFieldValues[fieldName] = '';
+    saveCustomFields();
+    
+    // Clear inputs
+    document.getElementById('newFieldName').value = '';
+    document.getElementById('newFieldType').value = 'text';
+    
+    displayCustomFieldsModal();
+    displayCustomFieldsValues();
+    showNotification('Champ ajouté avec succès', 'success');
+});
+
+function saveCustomFields() {
+    localStorage.setItem(`customFields_${currentProfile}`, JSON.stringify(customFields));
+    localStorage.setItem(`customFieldValues_${currentProfile}`, JSON.stringify(customFieldValues));
+}
+
+function displayCustomFieldsValues() {
+    if (customFields.length === 0) {
+        customFieldsDisplay.innerHTML = '';
+        return;
+    }
+    
+    customFieldsDisplay.innerHTML = '';
+    
+    const container = document.createElement('div');
+    container.style.cssText = 'margin-top: 20px; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
+    
+    const title = document.createElement('h3');
+    title.textContent = '📝 Champs Personnalisés';
+    container.appendChild(title);
+    
+    customFields.forEach(field => {
+        const fieldGroup = document.createElement('div');
+        fieldGroup.style.cssText = 'margin: 15px 0;';
+        
+        const label = document.createElement('label');
+        label.textContent = field.name;
+        label.style.cssText = 'display: block; font-weight: bold; margin-bottom: 5px;';
+        fieldGroup.appendChild(label);
+        
+        let input;
+        if (field.type === 'textarea') {
+            input = document.createElement('textarea');
+            input.rows = 3;
+        } else {
+            input = document.createElement('input');
+            input.type = field.type === 'currency' ? 'number' : field.type;
+            if (field.type === 'currency') {
+                input.step = '0.01';
+                input.min = '0';
+            }
+        }
+        
+        input.value = customFieldValues[field.name] || '';
+        input.style.cssText = 'width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1em;';
+        input.addEventListener('change', (e) => {
+            customFieldValues[field.name] = e.target.value;
+            saveCustomFields();
+        });
+        
+        fieldGroup.appendChild(input);
+        container.appendChild(fieldGroup);
+    });
+    
+    customFieldsDisplay.appendChild(container);
+}
+
+// Chart Details Modal Implementation
+closeChartDetailsModal.addEventListener('click', () => {
+    chartDetailsModal.style.display = 'none';
+});
+
+function showChartDetails() {
+    const chartDetailsContent = document.getElementById('chartDetailsContent');
+    chartDetailsContent.innerHTML = '';
+    
+    const expenses = transactions.filter(t => t.type === 'expense');
+    
+    if (expenses.length === 0) {
+        chartDetailsContent.innerHTML = '<p>Aucune dépense à afficher</p>';
+        chartDetailsModal.style.display = 'block';
+        return;
+    }
+    
+    // Group by category
+    const expensesByCategory = {};
+    expenses.forEach(t => {
+        if (!expensesByCategory[t.category]) {
+            expensesByCategory[t.category] = [];
+        }
+        expensesByCategory[t.category].push(t);
+    });
+    
+    // Calculate totals
+    const total = expenses.reduce((sum, t) => sum + t.amount, 0);
+    
+    // Sort categories by amount
+    const sortedCategories = Object.entries(expensesByCategory)
+        .map(([category, transactions]) => ({
+            category,
+            transactions,
+            total: transactions.reduce((sum, t) => sum + t.amount, 0)
+        }))
+        .sort((a, b) => b.total - a.total);
+    
+    // Create detailed view
+    sortedCategories.forEach(({ category, transactions, total: categoryTotal }) => {
+        const categoryDiv = document.createElement('div');
+        categoryDiv.style.cssText = 'margin-bottom: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;';
+        
+        const categoryHeader = document.createElement('div');
+        categoryHeader.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;';
+        
+        const categoryName = document.createElement('h3');
+        categoryName.textContent = category;
+        categoryName.style.margin = '0';
+        
+        const categoryStats = document.createElement('div');
+        categoryStats.style.textAlign = 'right';
+        
+        const categoryAmount = document.createElement('div');
+        categoryAmount.textContent = formatCurrency(categoryTotal);
+        categoryAmount.style.cssText = 'font-size: 1.5em; font-weight: bold; color: #e74c3c;';
+        
+        const categoryPercentage = document.createElement('div');
+        categoryPercentage.textContent = `${((categoryTotal / total) * 100).toFixed(1)}% du total`;
+        categoryPercentage.style.color = '#7f8c8d';
+        
+        categoryStats.appendChild(categoryAmount);
+        categoryStats.appendChild(categoryPercentage);
+        
+        categoryHeader.appendChild(categoryName);
+        categoryHeader.appendChild(categoryStats);
+        categoryDiv.appendChild(categoryHeader);
+        
+        // List transactions
+        const transactionsList = document.createElement('div');
+        transactions.forEach(t => {
+            const transDiv = document.createElement('div');
+            transDiv.style.cssText = 'display: flex; justify-content: space-between; padding: 10px; margin: 5px 0; background: white; border-radius: 5px;';
+            
+            const descDiv = document.createElement('div');
+            const descSpan = document.createElement('span');
+            descSpan.textContent = t.description;
+            descSpan.style.fontWeight = 'bold';
+            descDiv.appendChild(descSpan);
+            
+            const dateSpan = document.createElement('span');
+            dateSpan.textContent = ` - ${formatDate(t.date)}`;
+            dateSpan.style.cssText = 'color: #7f8c8d; font-size: 0.9em;';
+            descDiv.appendChild(dateSpan);
+            
+            const amountDiv = document.createElement('div');
+            amountDiv.textContent = formatCurrency(t.amount);
+            amountDiv.style.cssText = 'font-weight: bold; color: #e74c3c;';
+            
+            transDiv.appendChild(descDiv);
+            transDiv.appendChild(amountDiv);
+            transactionsList.appendChild(transDiv);
+        });
+        
+        categoryDiv.appendChild(transactionsList);
+        chartDetailsContent.appendChild(categoryDiv);
+    });
+    
+    chartDetailsModal.style.display = 'block';
+}
+
 // Initialiser
 updateUI();
 updateMonthInfo();
+displayCustomFieldsValues();
