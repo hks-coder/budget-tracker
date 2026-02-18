@@ -779,6 +779,56 @@ header p {
     box-shadow: 0 5px 15px rgba(79, 172, 254, 0.4);
 }
 
+/* Export/Import Section */
+.export-import-section {
+    margin-top: 30px;
+    padding: 25px;
+    background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.export-import-section h3 {
+    color: #c0392b;
+    margin-bottom: 10px;
+    font-size: 1.5em;
+    text-align: center;
+}
+
+.section-description {
+    text-align: center;
+    color: #555;
+    margin-bottom: 20px;
+    font-size: 0.95em;
+    line-height: 1.5;
+}
+
+.export-import-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.btn-export {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+}
+
+.btn-export:hover {
+    box-shadow: 0 5px 15px rgba(17, 153, 142, 0.4);
+    transform: translateY(-2px);
+}
+
+.btn-import {
+    background: linear-gradient(135deg, #ee0979 0%, #ff6a00 100%);
+    color: white;
+}
+
+.btn-import:hover {
+    box-shadow: 0 5px 15px rgba(238, 9, 121, 0.4);
+    transform: translateY(-2px);
+}
+
 .month-info {
     margin-top: 15px;
     padding: 15px;
