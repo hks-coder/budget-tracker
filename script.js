@@ -288,9 +288,10 @@ function importTransactions(accountId) {
 function generateSampleTransactions(account) {
     // Generate sample transactions to simulate bank import
     const today = new Date();
+    const baseTimestamp = Date.now();
     const sampleTransactions = [
         {
-            id: Date.now() + 1,
+            id: baseTimestamp * 1000 + 1,
             type: 'income',
             amount: 2500.00,
             category: 'Salaire',
@@ -300,7 +301,7 @@ function generateSampleTransactions(account) {
             selected: true
         },
         {
-            id: Date.now() + 2,
+            id: baseTimestamp * 1000 + 2,
             type: 'expense',
             amount: 45.50,
             category: 'Courses',
@@ -310,7 +311,7 @@ function generateSampleTransactions(account) {
             selected: true
         },
         {
-            id: Date.now() + 3,
+            id: baseTimestamp * 1000 + 3,
             type: 'expense',
             amount: 12.80,
             category: 'Transport',
@@ -320,7 +321,7 @@ function generateSampleTransactions(account) {
             selected: true
         },
         {
-            id: Date.now() + 4,
+            id: baseTimestamp * 1000 + 4,
             type: 'expense',
             amount: 850.00,
             category: 'Appartement',
@@ -330,7 +331,7 @@ function generateSampleTransactions(account) {
             selected: true
         },
         {
-            id: Date.now() + 5,
+            id: baseTimestamp * 1000 + 5,
             type: 'expense',
             amount: 23.90,
             category: 'Restaurant',
