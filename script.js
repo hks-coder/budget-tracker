@@ -1277,54 +1277,49 @@ function showChartDetails() {
     chartDetailsModal.style.display = 'block';
 }
 
-// Excel Export Functions
+// Excel Export Functions (using CSV format compatible with Excel)
 function exportArchiveToExcel(archive) {
     try {
-        const wb = XLSX.utils.book_new();
+        // Create CSV content
+        let csvContent = '';
         
-        // Create summary sheet
-        const summaryData = [
-            ['Mois', archive.month],
-            ['Année', archive.year],
-            ['Date d\'archivage', new Date(archive.archivedDate).toLocaleDateString('fr-FR')],
-            [''],
-            ['Résumé Financier'],
-            ['Revenus', archive.summary.income + ' €'],
-            ['Dépenses', archive.summary.expense + ' €'],
-            ['Solde', archive.summary.balance + ' €'],
-            ['Nombre de transactions', archive.summary.transactionCount]
-        ];
+        // Add summary section
+        csvContent += 'Résumé du Mois\n';
+        csvContent += `Mois,${archive.month}\n`;
+        csvContent += `Année,${archive.year}\n`;
+        csvContent += `Date d'archivage,${new Date(archive.archivedDate).toLocaleDateString('fr-FR')}\n`;
+        csvContent += '\n';
+        csvContent += 'Résumé Financier\n';
+        csvContent += `Revenus,${archive.summary.income} €\n`;
+        csvContent += `Dépenses,${archive.summary.expense} €\n`;
+        csvContent += `Solde,${archive.summary.balance} €\n`;
+        csvContent += `Nombre de transactions,${archive.summary.transactionCount}\n`;
+        csvContent += '\n\n';
         
-        const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-        XLSX.utils.book_append_sheet(wb, summarySheet, 'Résumé');
-        
-        // Create transactions sheet
+        // Add transactions section
         if (archive.transactions && archive.transactions.length > 0) {
-            const transactionsData = [
-                ['Date', 'Type', 'Catégorie', 'Description', 'Montant (€)']
-            ];
+            csvContent += 'Transactions\n';
+            csvContent += 'Date,Type,Catégorie,Description,Montant (€)\n';
             
             archive.transactions.forEach(t => {
-                transactionsData.push([
-                    formatDate(t.date),
-                    t.type === 'income' ? 'Revenu' : 'Dépense',
-                    t.category,
-                    t.description,
-                    t.amount
-                ]);
+                const description = t.description.replace(/"/g, '""'); // Escape quotes
+                csvContent += `${formatDate(t.date)},${t.type === 'income' ? 'Revenu' : 'Dépense'},${t.category},"${description}",${t.amount}\n`;
             });
-            
-            const transactionsSheet = XLSX.utils.aoa_to_sheet(transactionsData);
-            XLSX.utils.book_append_sheet(wb, transactionsSheet, 'Transactions');
         }
         
-        // Generate filename
-        const filename = `Budget_${archive.month}_${archive.year}.xlsx`;
+        // Create blob and download
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' }); // UTF-8 BOM for Excel
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
         
-        // Save file
-        XLSX.writeFile(wb, filename);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `Budget_${archive.month}_${archive.year}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
         
-        showNotification(`✅ Archive exportée: ${filename}`, 'success');
+        showNotification(`✅ Archive exportée: Budget_${archive.month}_${archive.year}.csv`, 'success');
     } catch (error) {
         console.error('Error exporting archive:', error);
         showNotification('❌ Erreur lors de l\'exportation', 'error');
@@ -1338,58 +1333,50 @@ function exportAllArchivesToExcel() {
     }
     
     try {
-        const wb = XLSX.utils.book_new();
+        // Create CSV content
+        let csvContent = '';
         
-        // Create summary sheet for all archives
-        const allSummaryData = [
-            ['Mois', 'Année', 'Revenus (€)', 'Dépenses (€)', 'Solde (€)', 'Transactions']
-        ];
+        // Add summary of all archives
+        csvContent += 'Résumé de Toutes les Archives\n';
+        csvContent += 'Mois,Année,Revenus (€),Dépenses (€),Solde (€),Transactions\n';
         
         archivedMonths.forEach(archive => {
-            allSummaryData.push([
-                archive.month,
-                archive.year,
-                archive.summary.income,
-                archive.summary.expense,
-                archive.summary.balance,
-                archive.summary.transactionCount
-            ]);
+            csvContent += `${archive.month},${archive.year},${archive.summary.income},${archive.summary.expense},${archive.summary.balance},${archive.summary.transactionCount}\n`;
         });
         
-        const summarySheet = XLSX.utils.aoa_to_sheet(allSummaryData);
-        XLSX.utils.book_append_sheet(wb, summarySheet, 'Résumé Annuel');
+        csvContent += '\n\n';
         
-        // Create a sheet for each archive with its transactions
-        archivedMonths.forEach((archive, index) => {
+        // Add transactions for each archive
+        archivedMonths.forEach(archive => {
+            csvContent += `\nArchive: ${archive.month} ${archive.year}\n`;
+            csvContent += `Date d'archivage: ${new Date(archive.archivedDate).toLocaleDateString('fr-FR')}\n`;
+            csvContent += '\n';
+            
             if (archive.transactions && archive.transactions.length > 0) {
-                const transactionsData = [
-                    ['Date', 'Type', 'Catégorie', 'Description', 'Montant (€)']
-                ];
+                csvContent += 'Date,Type,Catégorie,Description,Montant (€)\n';
                 
                 archive.transactions.forEach(t => {
-                    transactionsData.push([
-                        formatDate(t.date),
-                        t.type === 'income' ? 'Revenu' : 'Dépense',
-                        t.category,
-                        t.description,
-                        t.amount
-                    ]);
+                    const description = t.description.replace(/"/g, '""'); // Escape quotes
+                    csvContent += `${formatDate(t.date)},${t.type === 'income' ? 'Revenu' : 'Dépense'},${t.category},"${description}",${t.amount}\n`;
                 });
                 
-                const transactionsSheet = XLSX.utils.aoa_to_sheet(transactionsData);
-                // Sheet name limited to 31 characters
-                const sheetName = `${archive.month.substring(0, 3)}_${archive.year}`.substring(0, 31);
-                XLSX.utils.book_append_sheet(wb, transactionsSheet, sheetName);
+                csvContent += '\n';
             }
         });
         
-        // Generate filename
-        const filename = `Budget_Toutes_Archives_${currentProfile}.xlsx`;
+        // Create blob and download
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' }); // UTF-8 BOM for Excel
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
         
-        // Save file
-        XLSX.writeFile(wb, filename);
+        link.setAttribute('href', url);
+        link.setAttribute('download', `Budget_Toutes_Archives_${currentProfile}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
         
-        showNotification(`✅ Toutes les archives exportées: ${filename}`, 'success');
+        showNotification(`✅ Toutes les archives exportées: Budget_Toutes_Archives_${currentProfile}.csv`, 'success');
     } catch (error) {
         console.error('Error exporting all archives:', error);
         showNotification('❌ Erreur lors de l\'exportation de toutes les archives', 'error');
