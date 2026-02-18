@@ -242,7 +242,7 @@ incomeForm.addEventListener('submit', (e) => {
         return;
     }
     
-    if (!description || description.length === 0) {
+    if (!description) {
         showNotification('⚠️ Veuillez entrer une description', 'warning');
         return;
     }
@@ -313,7 +313,7 @@ expenseForm.addEventListener('submit', (e) => {
         return;
     }
     
-    if (!description || description.length === 0) {
+    if (!description) {
         showNotification('⚠️ Veuillez entrer une description', 'warning');
         return;
     }
@@ -378,13 +378,6 @@ function updateSummary() {
     totalIncome.textContent = formatCurrency(income);
     totalExpense.textContent = formatCurrency(expense);
     totalBalance.textContent = formatCurrency(balance);
-}
-
-// Helper function to escape HTML and prevent XSS
-function escapeHtml(unsafe) {
-    const div = document.createElement('div');
-    div.textContent = unsafe;
-    return div.innerHTML;
 }
 
 // Afficher les transactions
@@ -833,6 +826,40 @@ function getCurrentMonthYear() {
     };
 }
 
+// Create archive object from current transactions
+function createArchiveFromCurrentTransactions() {
+    const { month, year, key } = getCurrentMonthYear();
+    
+    const income = transactions
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + t.amount, 0);
+    const expense = transactions
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0);
+    
+    return {
+        key: key,
+        month: month,
+        year: year,
+        archivedDate: new Date().toISOString(),
+        transactions: [...transactions],
+        summary: {
+            income: income,
+            expense: expense,
+            balance: income - expense,
+            transactionCount: transactions.length
+        }
+    };
+}
+
+// Save archive to localStorage
+function saveArchive(archive) {
+    // Remove existing archive for this month if any
+    archivedMonths = archivedMonths.filter(a => a.key !== archive.key);
+    archivedMonths.unshift(archive);
+    localStorage.setItem(`archived_${currentProfile}`, JSON.stringify(archivedMonths));
+}
+
 // Update month info display
 function updateMonthInfo() {
     const { month, year } = getCurrentMonthYear();
@@ -867,33 +894,10 @@ archiveMonthBtn.addEventListener('click', () => {
             if (!confirm('⚠️ Ce mois a déjà été archivé. Voulez-vous le mettre à jour?')) {
                 return;
             }
-            // Remove existing archive
-            archivedMonths = archivedMonths.filter(a => a.key !== key);
         }
         
-        const income = transactions
-            .filter(t => t.type === 'income')
-            .reduce((sum, t) => sum + t.amount, 0);
-        const expense = transactions
-            .filter(t => t.type === 'expense')
-            .reduce((sum, t) => sum + t.amount, 0);
-        
-        const archive = {
-            key: key,
-            month: month,
-            year: year,
-            archivedDate: new Date().toISOString(),
-            transactions: [...transactions],
-            summary: {
-                income: income,
-                expense: expense,
-                balance: income - expense,
-                transactionCount: transactions.length
-            }
-        };
-        
-        archivedMonths.unshift(archive);
-        localStorage.setItem(`archived_${currentProfile}`, JSON.stringify(archivedMonths));
+        const archive = createArchiveFromCurrentTransactions();
+        saveArchive(archive);
         
         showNotification(`✅ Mois de ${month} ${year} sauvegardé avec succès!`, 'success');
     }
@@ -907,34 +911,11 @@ startNewMonthBtn.addEventListener('click', () => {
     }
     
     if (confirm('🆕 Démarrer un nouveau mois?\n\n⚠️ Cette action va:\n1. Sauvegarder le mois actuel dans les archives\n2. Effacer toutes les transactions actuelles\n3. Vous permettre de démarrer sur une base vierge\n\nContinuer?')) {
-        // First archive the current month
-        const { month, year, key } = getCurrentMonthYear();
+        const { month, year } = getCurrentMonthYear();
         
-        const income = transactions
-            .filter(t => t.type === 'income')
-            .reduce((sum, t) => sum + t.amount, 0);
-        const expense = transactions
-            .filter(t => t.type === 'expense')
-            .reduce((sum, t) => sum + t.amount, 0);
-        
-        const archive = {
-            key: key,
-            month: month,
-            year: year,
-            archivedDate: new Date().toISOString(),
-            transactions: [...transactions],
-            summary: {
-                income: income,
-                expense: expense,
-                balance: income - expense,
-                transactionCount: transactions.length
-            }
-        };
-        
-        // Remove existing archive for this month if any
-        archivedMonths = archivedMonths.filter(a => a.key !== key);
-        archivedMonths.unshift(archive);
-        localStorage.setItem(`archived_${currentProfile}`, JSON.stringify(archivedMonths));
+        // Create and save archive
+        const archive = createArchiveFromCurrentTransactions();
+        saveArchive(archive);
         
         // Clear current transactions
         transactions = [];
@@ -1010,37 +991,53 @@ function displayArchives() {
         // Income stat
         const incomeStat = document.createElement('div');
         incomeStat.className = 'archive-stat income';
-        incomeStat.innerHTML = `
-            <div class="label">Revenus</div>
-            <div class="value">${formatCurrency(archive.summary.income)}</div>
-        `;
+        const incomeLabel = document.createElement('div');
+        incomeLabel.className = 'label';
+        incomeLabel.textContent = 'Revenus';
+        const incomeValue = document.createElement('div');
+        incomeValue.className = 'value';
+        incomeValue.textContent = formatCurrency(archive.summary.income);
+        incomeStat.appendChild(incomeLabel);
+        incomeStat.appendChild(incomeValue);
         statsDiv.appendChild(incomeStat);
         
         // Expense stat
         const expenseStat = document.createElement('div');
         expenseStat.className = 'archive-stat expense';
-        expenseStat.innerHTML = `
-            <div class="label">Dépenses</div>
-            <div class="value">${formatCurrency(archive.summary.expense)}</div>
-        `;
+        const expenseLabel = document.createElement('div');
+        expenseLabel.className = 'label';
+        expenseLabel.textContent = 'Dépenses';
+        const expenseValue = document.createElement('div');
+        expenseValue.className = 'value';
+        expenseValue.textContent = formatCurrency(archive.summary.expense);
+        expenseStat.appendChild(expenseLabel);
+        expenseStat.appendChild(expenseValue);
         statsDiv.appendChild(expenseStat);
         
         // Balance stat
         const balanceStat = document.createElement('div');
         balanceStat.className = 'archive-stat balance';
-        balanceStat.innerHTML = `
-            <div class="label">Solde</div>
-            <div class="value">${formatCurrency(archive.summary.balance)}</div>
-        `;
+        const balanceLabel = document.createElement('div');
+        balanceLabel.className = 'label';
+        balanceLabel.textContent = 'Solde';
+        const balanceValue = document.createElement('div');
+        balanceValue.className = 'value';
+        balanceValue.textContent = formatCurrency(archive.summary.balance);
+        balanceStat.appendChild(balanceLabel);
+        balanceStat.appendChild(balanceValue);
         statsDiv.appendChild(balanceStat);
         
         // Transaction count stat
         const countStat = document.createElement('div');
         countStat.className = 'archive-stat';
-        countStat.innerHTML = `
-            <div class="label">Transactions</div>
-            <div class="value">${archive.summary.transactionCount}</div>
-        `;
+        const countLabel = document.createElement('div');
+        countLabel.className = 'label';
+        countLabel.textContent = 'Transactions';
+        const countValue = document.createElement('div');
+        countValue.className = 'value';
+        countValue.textContent = archive.summary.transactionCount.toString();
+        countStat.appendChild(countLabel);
+        countStat.appendChild(countValue);
         statsDiv.appendChild(countStat);
         
         archiveItem.appendChild(statsDiv);
