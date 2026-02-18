@@ -192,9 +192,42 @@
                 <button class="btn btn-archive" id="archiveMonth">💾 Sauvegarder le Mois en Cours</button>
                 <button class="btn btn-new-month" id="startNewMonth">🆕 Démarrer un Nouveau Mois</button>
                 <button class="btn btn-view-archives" id="viewArchives">📚 Voir les Archives</button>
+                <button class="btn btn-customize-fields" id="customizeFields">⚙️ Personnaliser les Champs</button>
             </div>
             <div id="currentMonthInfo" class="month-info"></div>
+            
+            <!-- Custom Fields Display -->
+            <div id="customFieldsDisplay" class="custom-fields-display"></div>
         </section>
+
+        <!-- Custom Fields Modal -->
+        <div id="customFieldsModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close-modal" id="closeCustomFieldsModal">&times;</span>
+                <h2>⚙️ Personnaliser les Champs Mensuels</h2>
+                <p class="modal-description">Ajoutez des champs personnalisés pour suivre d'autres métriques importantes (budget épargne, objectifs, notes, etc.)</p>
+                
+                <div id="customFieldsList"></div>
+                
+                <div class="add-field-section">
+                    <h3>➕ Ajouter un nouveau champ</h3>
+                    <div class="form-group">
+                        <label for="newFieldName">Nom du champ</label>
+                        <input type="text" id="newFieldName" placeholder="Ex: Budget Épargne, Objectif du mois">
+                    </div>
+                    <div class="form-group">
+                        <label for="newFieldType">Type de champ</label>
+                        <select id="newFieldType">
+                            <option value="text">Texte</option>
+                            <option value="number">Nombre</option>
+                            <option value="currency">Montant (€)</option>
+                            <option value="textarea">Texte long (Notes)</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-add-field" id="addCustomField">Ajouter le champ</button>
+                </div>
+            </div>
+        </div>
 
         <!-- Archives Modal -->
         <div id="archivesModal" class="modal" style="display: none;">
@@ -237,6 +270,15 @@
                 <p style="font-size: 1.2em;">Aucune dépense pour le moment</p>
             </div>
         </section>
+
+        <!-- Chart Details Modal -->
+        <div id="chartDetailsModal" class="modal" style="display: none;">
+            <div class="modal-content modal-large">
+                <span class="close-modal" id="closeChartDetailsModal">&times;</span>
+                <h2>📊 Analyse Détaillée des Dépenses</h2>
+                <div id="chartDetailsContent"></div>
+            </div>
+        </div>
     </div>
 
     <script src="script.js"></script>

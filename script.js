@@ -502,6 +502,7 @@ function updateUI() {
     updateCategoryFilter();
     updateExpenseChart();
     updateMonthInfo();
+    updateCustomFieldsDisplay();
 }
 
 // Mettre à jour le résumé
@@ -779,6 +780,16 @@ function updateExpenseChart() {
     chartHTML += '</div>';
     
     chartHTML += '</div>';
+    
+    // Add button to view details
+    chartHTML += `
+        <div style="text-align: center; margin-top: 20px;">
+            <button class="btn btn-chart-details" onclick="showChartDetails()" style="padding: 12px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 1em; cursor: pointer; transition: all 0.3s ease;">
+                🔍 Voir les Détails Complets
+            </button>
+        </div>
+    `;
+    
     chartSection.innerHTML = chartHTML;
 }
 
@@ -833,6 +844,17 @@ const viewArchivesBtn = document.getElementById('viewArchives');
 const archivesModal = document.getElementById('archivesModal');
 const closeModal = document.getElementById('closeModal');
 const currentMonthInfo = document.getElementById('currentMonthInfo');
+
+// Custom Fields Elements
+const customizeFieldsBtn = document.getElementById('customizeFields');
+const customFieldsModal = document.getElementById('customFieldsModal');
+const closeCustomFieldsModal = document.getElementById('closeCustomFieldsModal');
+const addCustomFieldBtn = document.getElementById('addCustomField');
+const customFieldsDisplay = document.getElementById('customFieldsDisplay');
+
+// Chart Details Elements
+const chartDetailsModal = document.getElementById('chartDetailsModal');
+const closeChartDetailsModal = document.getElementById('closeChartDetailsModal');
 
 // Constants
 const MAX_PREVIEW_TRANSACTIONS = 5;
@@ -976,6 +998,12 @@ closeModal.addEventListener('click', () => {
 window.addEventListener('click', (event) => {
     if (event.target === archivesModal) {
         archivesModal.style.display = 'none';
+    }
+    if (event.target === customFieldsModal) {
+        customFieldsModal.style.display = 'none';
+    }
+    if (event.target === chartDetailsModal) {
+        chartDetailsModal.style.display = 'none';
     }
 });
 
