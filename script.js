@@ -1010,6 +1010,14 @@ function displayArchives() {
         }
         
         archiveItem.appendChild(transactionsDiv);
+        
+        // Add export button for this archive
+        const exportBtn = document.createElement('button');
+        exportBtn.className = 'btn-export-archive';
+        exportBtn.textContent = '📊 Exporter en Excel';
+        exportBtn.addEventListener('click', () => exportArchiveToExcel(archive));
+        archiveItem.appendChild(exportBtn);
+        
         archivesList.appendChild(archiveItem);
     });
 }
@@ -1267,6 +1275,131 @@ function showChartDetails() {
     });
     
     chartDetailsModal.style.display = 'block';
+}
+
+// Excel Export Functions
+function exportArchiveToExcel(archive) {
+    try {
+        const wb = XLSX.utils.book_new();
+        
+        // Create summary sheet
+        const summaryData = [
+            ['Mois', archive.month],
+            ['Année', archive.year],
+            ['Date d\'archivage', new Date(archive.archivedDate).toLocaleDateString('fr-FR')],
+            [''],
+            ['Résumé Financier'],
+            ['Revenus', archive.summary.income + ' €'],
+            ['Dépenses', archive.summary.expense + ' €'],
+            ['Solde', archive.summary.balance + ' €'],
+            ['Nombre de transactions', archive.summary.transactionCount]
+        ];
+        
+        const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
+        XLSX.utils.book_append_sheet(wb, summarySheet, 'Résumé');
+        
+        // Create transactions sheet
+        if (archive.transactions && archive.transactions.length > 0) {
+            const transactionsData = [
+                ['Date', 'Type', 'Catégorie', 'Description', 'Montant (€)']
+            ];
+            
+            archive.transactions.forEach(t => {
+                transactionsData.push([
+                    formatDate(t.date),
+                    t.type === 'income' ? 'Revenu' : 'Dépense',
+                    t.category,
+                    t.description,
+                    t.amount
+                ]);
+            });
+            
+            const transactionsSheet = XLSX.utils.aoa_to_sheet(transactionsData);
+            XLSX.utils.book_append_sheet(wb, transactionsSheet, 'Transactions');
+        }
+        
+        // Generate filename
+        const filename = `Budget_${archive.month}_${archive.year}.xlsx`;
+        
+        // Save file
+        XLSX.writeFile(wb, filename);
+        
+        showNotification(`✅ Archive exportée: ${filename}`, 'success');
+    } catch (error) {
+        console.error('Error exporting archive:', error);
+        showNotification('❌ Erreur lors de l\'exportation', 'error');
+    }
+}
+
+function exportAllArchivesToExcel() {
+    if (archivedMonths.length === 0) {
+        showNotification('⚠️ Aucune archive à exporter', 'warning');
+        return;
+    }
+    
+    try {
+        const wb = XLSX.utils.book_new();
+        
+        // Create summary sheet for all archives
+        const allSummaryData = [
+            ['Mois', 'Année', 'Revenus (€)', 'Dépenses (€)', 'Solde (€)', 'Transactions']
+        ];
+        
+        archivedMonths.forEach(archive => {
+            allSummaryData.push([
+                archive.month,
+                archive.year,
+                archive.summary.income,
+                archive.summary.expense,
+                archive.summary.balance,
+                archive.summary.transactionCount
+            ]);
+        });
+        
+        const summarySheet = XLSX.utils.aoa_to_sheet(allSummaryData);
+        XLSX.utils.book_append_sheet(wb, summarySheet, 'Résumé Annuel');
+        
+        // Create a sheet for each archive with its transactions
+        archivedMonths.forEach((archive, index) => {
+            if (archive.transactions && archive.transactions.length > 0) {
+                const transactionsData = [
+                    ['Date', 'Type', 'Catégorie', 'Description', 'Montant (€)']
+                ];
+                
+                archive.transactions.forEach(t => {
+                    transactionsData.push([
+                        formatDate(t.date),
+                        t.type === 'income' ? 'Revenu' : 'Dépense',
+                        t.category,
+                        t.description,
+                        t.amount
+                    ]);
+                });
+                
+                const transactionsSheet = XLSX.utils.aoa_to_sheet(transactionsData);
+                // Sheet name limited to 31 characters
+                const sheetName = `${archive.month.substring(0, 3)}_${archive.year}`.substring(0, 31);
+                XLSX.utils.book_append_sheet(wb, transactionsSheet, sheetName);
+            }
+        });
+        
+        // Generate filename
+        const filename = `Budget_Toutes_Archives_${currentProfile}.xlsx`;
+        
+        // Save file
+        XLSX.writeFile(wb, filename);
+        
+        showNotification(`✅ Toutes les archives exportées: ${filename}`, 'success');
+    } catch (error) {
+        console.error('Error exporting all archives:', error);
+        showNotification('❌ Erreur lors de l\'exportation de toutes les archives', 'error');
+    }
+}
+
+// Add event listener for export all button
+const exportAllArchivesBtn = document.getElementById('exportAllArchives');
+if (exportAllArchivesBtn) {
+    exportAllArchivesBtn.addEventListener('click', exportAllArchivesToExcel);
 }
 
 // Initialiser
