@@ -854,6 +854,17 @@ header p {
     font-size: 1.3em;
 }
 
+.archive-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.archive-header h3 {
+    margin: 0;
+}
+
 .archive-stats {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));

@@ -782,6 +782,16 @@ function saveArchive(archive) {
     localStorage.setItem(`archived_${currentProfile}`, JSON.stringify(archivedMonths));
 }
 
+// Delete archive from localStorage
+function deleteArchive(key) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer cette archive ?\n\n⚠️ Cette action est irréversible.')) {
+        archivedMonths = archivedMonths.filter(a => a.key !== key);
+        localStorage.setItem(`archived_${currentProfile}`, JSON.stringify(archivedMonths));
+        displayArchives();
+        showNotification('✅ Archive supprimée avec succès', 'success');
+    }
+}
+
 // Update month info display
 function updateMonthInfo() {
     const { month, year } = getCurrentMonthYear();
@@ -901,10 +911,22 @@ function displayArchives() {
         const archiveItem = document.createElement('div');
         archiveItem.className = 'archive-item';
         
-        // Header
+        // Header with delete button
+        const headerDiv = document.createElement('div');
+        headerDiv.className = 'archive-header';
+        
         const h3 = document.createElement('h3');
         h3.textContent = `📅 ${archive.month} ${archive.year}`;
-        archiveItem.appendChild(h3);
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.textContent = '🗑️';
+        deleteBtn.title = 'Supprimer cette archive';
+        deleteBtn.addEventListener('click', () => deleteArchive(archive.key));
+        
+        headerDiv.appendChild(h3);
+        headerDiv.appendChild(deleteBtn);
+        archiveItem.appendChild(headerDiv);
         
         // Archive date
         const dateP = document.createElement('p');
