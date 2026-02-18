@@ -1278,6 +1278,19 @@ function showChartDetails() {
 }
 
 // Excel Export Functions (using CSV format compatible with Excel)
+// Helper function to escape CSV field values
+function escapeCSVField(field) {
+    if (field === null || field === undefined) {
+        return '';
+    }
+    const value = String(field);
+    // If field contains comma, quote, newline, or carriage return, wrap it in quotes and escape internal quotes
+    if (value.includes(',') || value.includes('"') || value.includes('\n') || value.includes('\r')) {
+        return '"' + value.replace(/"/g, '""') + '"';
+    }
+    return value;
+}
+
 function exportArchiveToExcel(archive) {
     try {
         // Create CSV content
@@ -1285,7 +1298,7 @@ function exportArchiveToExcel(archive) {
         
         // Add summary section
         csvContent += 'Résumé du Mois\n';
-        csvContent += `Mois,${archive.month}\n`;
+        csvContent += `Mois,${escapeCSVField(archive.month)}\n`;
         csvContent += `Année,${archive.year}\n`;
         csvContent += `Date d'archivage,${new Date(archive.archivedDate).toLocaleDateString('fr-FR')}\n`;
         csvContent += '\n';
@@ -1302,8 +1315,7 @@ function exportArchiveToExcel(archive) {
             csvContent += 'Date,Type,Catégorie,Description,Montant (€)\n';
             
             archive.transactions.forEach(t => {
-                const description = t.description.replace(/"/g, '""'); // Escape quotes
-                csvContent += `${formatDate(t.date)},${t.type === 'income' ? 'Revenu' : 'Dépense'},${t.category},"${description}",${t.amount}\n`;
+                csvContent += `${escapeCSVField(formatDate(t.date))},${escapeCSVField(t.type === 'income' ? 'Revenu' : 'Dépense')},${escapeCSVField(t.category)},${escapeCSVField(t.description)},${t.amount}\n`;
             });
         }
         
@@ -1312,8 +1324,12 @@ function exportArchiveToExcel(archive) {
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         
+        // Sanitize filename
+        const safeMonth = archive.month.replace(/[^a-zA-Z0-9_\-]/g, '_');
+        const safeYear = archive.year;
+        
         link.setAttribute('href', url);
-        link.setAttribute('download', `Budget_${archive.month}_${archive.year}.csv`);
+        link.setAttribute('download', `Budget_${safeMonth}_${safeYear}.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
@@ -1341,14 +1357,14 @@ function exportAllArchivesToExcel() {
         csvContent += 'Mois,Année,Revenus (€),Dépenses (€),Solde (€),Transactions\n';
         
         archivedMonths.forEach(archive => {
-            csvContent += `${archive.month},${archive.year},${archive.summary.income},${archive.summary.expense},${archive.summary.balance},${archive.summary.transactionCount}\n`;
+            csvContent += `${escapeCSVField(archive.month)},${archive.year},${archive.summary.income},${archive.summary.expense},${archive.summary.balance},${archive.summary.transactionCount}\n`;
         });
         
         csvContent += '\n\n';
         
         // Add transactions for each archive
         archivedMonths.forEach(archive => {
-            csvContent += `\nArchive: ${archive.month} ${archive.year}\n`;
+            csvContent += `\nArchive: ${escapeCSVField(archive.month)} ${archive.year}\n`;
             csvContent += `Date d'archivage: ${new Date(archive.archivedDate).toLocaleDateString('fr-FR')}\n`;
             csvContent += '\n';
             
@@ -1356,8 +1372,7 @@ function exportAllArchivesToExcel() {
                 csvContent += 'Date,Type,Catégorie,Description,Montant (€)\n';
                 
                 archive.transactions.forEach(t => {
-                    const description = t.description.replace(/"/g, '""'); // Escape quotes
-                    csvContent += `${formatDate(t.date)},${t.type === 'income' ? 'Revenu' : 'Dépense'},${t.category},"${description}",${t.amount}\n`;
+                    csvContent += `${escapeCSVField(formatDate(t.date))},${escapeCSVField(t.type === 'income' ? 'Revenu' : 'Dépense')},${escapeCSVField(t.category)},${escapeCSVField(t.description)},${t.amount}\n`;
                 });
                 
                 csvContent += '\n';
@@ -1369,14 +1384,17 @@ function exportAllArchivesToExcel() {
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         
+        // Sanitize profile name for filename
+        const safeProfile = currentProfile.replace(/[^a-zA-Z0-9_\-]/g, '_');
+        
         link.setAttribute('href', url);
-        link.setAttribute('download', `Budget_Toutes_Archives_${currentProfile}.csv`);
+        link.setAttribute('download', `Budget_Toutes_Archives_${safeProfile}.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         
-        showNotification(`✅ Toutes les archives exportées: Budget_Toutes_Archives_${currentProfile}.csv`, 'success');
+        showNotification(`✅ Toutes les archives exportées: Budget_Toutes_Archives_${safeProfile}.csv`, 'success');
     } catch (error) {
         console.error('Error exporting all archives:', error);
         showNotification('❌ Erreur lors de l\'exportation de toutes les archives', 'error');
