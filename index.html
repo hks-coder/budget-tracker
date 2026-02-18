@@ -110,8 +110,16 @@
                             <option value="Santé">⚕️ Santé</option>
                             <option value="Restaurant">🍽️ Restaurant</option>
                             <option value="Éducation">📚 Éducation</option>
+                            <option value="Épargne">💰 Épargne</option>
+                            <option value="Assurance Vie">🏥 Assurance Vie</option>
+                            <option value="Frais Bancaire">🏦 Frais Bancaire</option>
                             <option value="Autre">📦 Autre</option>
+                            <option value="custom">✏️ Catégorie Personnalisée</option>
                         </select>
+                    </div>
+                    <div class="form-group" id="customCategoryGroup" style="display: none;">
+                        <label for="customCategory">Nom de la catégorie personnalisée</label>
+                        <input type="text" id="customCategory" placeholder="Ex: Voyage, Cadeaux, etc.">
                     </div>
                     <div class="form-group">
                         <label for="expenseDescription">Description</label>
@@ -169,7 +177,7 @@
 
         <!-- Graphique des dépenses -->
         <section class="chart-section">
-            <h2>📈 Dépenses par Catégorie</h2>
+            <h2>📊 Dépenses par Catégorie</h2>
             <div style="text-align: center; padding: 40px; color: #7f8c8d;">
                 <p style="font-size: 1.2em;">Aucune dépense pour le moment</p>
             </div>
