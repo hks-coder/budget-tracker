@@ -1291,6 +1291,11 @@ function escapeCSVField(field) {
     return value;
 }
 
+// Helper function to sanitize filename components
+function sanitizeFilename(value, defaultValue = 'Unknown') {
+    return String(value || defaultValue).replace(/[^a-zA-Z0-9_]/g, '_');
+}
+
 function exportArchiveToExcel(archive) {
     try {
         // Create CSV content
@@ -1324,9 +1329,9 @@ function exportArchiveToExcel(archive) {
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
         
-        // Sanitize filename (no hyphens to avoid command-line flag issues)
-        const safeMonth = String(archive.month || 'Unknown').replace(/[^a-zA-Z0-9_]/g, '_');
-        const safeYear = String(archive.year || 'Unknown').replace(/[^a-zA-Z0-9_]/g, '_');
+        // Sanitize filename components (no hyphens to avoid command-line flag issues)
+        const safeMonth = sanitizeFilename(archive.month);
+        const safeYear = sanitizeFilename(archive.year);
         
         link.setAttribute('href', url);
         link.setAttribute('download', `Budget_${safeMonth}_${safeYear}.csv`);
@@ -1335,7 +1340,7 @@ function exportArchiveToExcel(archive) {
         link.click();
         document.body.removeChild(link);
         
-        showNotification(`✅ Archive exportée: Budget_${safeMonth}_${safeYear}.csv`, 'success');
+        showNotification(`✅ Archive exportée: Budget_${archive.month}_${archive.year}.csv`, 'success');
     } catch (error) {
         console.error('Error exporting archive:', error);
         showNotification('❌ Erreur lors de l\'exportation', 'error');
@@ -1385,7 +1390,7 @@ function exportAllArchivesToExcel() {
         const url = URL.createObjectURL(blob);
         
         // Sanitize profile name for filename (no hyphens to avoid command-line flag issues)
-        const safeProfile = String(currentProfile || 'default').replace(/[^a-zA-Z0-9_]/g, '_');
+        const safeProfile = sanitizeFilename(currentProfile, 'default');
         
         link.setAttribute('href', url);
         link.setAttribute('download', `Budget_Toutes_Archives_${safeProfile}.csv`);
@@ -1394,7 +1399,7 @@ function exportAllArchivesToExcel() {
         link.click();
         document.body.removeChild(link);
         
-        showNotification(`✅ Toutes les archives exportées: Budget_Toutes_Archives_${safeProfile}.csv`, 'success');
+        showNotification(`✅ Toutes les archives exportées: Budget_Toutes_Archives_${currentProfile}.csv`, 'success');
     } catch (error) {
         console.error('Error exporting all archives:', error);
         showNotification('❌ Erreur lors de l\'exportation de toutes les archives', 'error');
