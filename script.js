@@ -23,9 +23,22 @@ let authenticatedProfile = sessionStorage.getItem('authenticatedProfile');
 let currentProfile = localStorage.getItem('currentProfile') || 'hemank';
 let profileLocked = localStorage.getItem('profileLocked') === 'true';
 
+// Safe localStorage data loading with error handling
+function safeLoadFromStorage(key, defaultValue = []) {
+    try {
+        const data = localStorage.getItem(key);
+        if (!data) return defaultValue;
+        return JSON.parse(data);
+    } catch (error) {
+        console.error(`Error loading data from localStorage key "${key}":`, error);
+        showNotification(`⚠️ Erreur lors du chargement des données. Utilisation des valeurs par défaut.`, 'warning');
+        return defaultValue;
+    }
+}
+
 // Données
-let transactions = JSON.parse(localStorage.getItem(`transactions_${currentProfile}`)) || [];
-let archivedMonths = JSON.parse(localStorage.getItem(`archived_${currentProfile}`)) || [];
+let transactions = safeLoadFromStorage(`transactions_${currentProfile}`, []);
+let archivedMonths = safeLoadFromStorage(`archived_${currentProfile}`, []);
 
 // Éléments du DOM
 const profileSelect = document.getElementById('profileSelect');
@@ -190,8 +203,8 @@ function switchProfile(newProfile) {
     showNotification(`✅ Profil ${newProfile === 'hemank' ? 'Hemank' : 'Jullian'} sélectionné`, 'success');
     
     // Load new profile's transactions and archives
-    transactions = JSON.parse(localStorage.getItem(`transactions_${currentProfile}`)) || [];
-    archivedMonths = JSON.parse(localStorage.getItem(`archived_${currentProfile}`)) || [];
+    transactions = safeLoadFromStorage(`transactions_${currentProfile}`, []);
+    archivedMonths = safeLoadFromStorage(`archived_${currentProfile}`, []);
     
     // Update UI
     updateUI();
@@ -208,13 +221,49 @@ function updateHeaderProfileInfo() {
 incomeForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
+    const amount = parseFloat(document.getElementById('incomeAmount').value);
+    const category = document.getElementById('incomeCategory').value;
+    const description = document.getElementById('incomeDescription').value.trim();
+    const date = document.getElementById('incomeDate').value;
+    
+    // Input validation
+    if (isNaN(amount) || amount <= 0) {
+        showNotification('⚠️ Veuillez entrer un montant valide (supérieur à 0)', 'warning');
+        return;
+    }
+    
+    if (amount > 999999999) {
+        showNotification('⚠️ Le montant est trop élevé', 'warning');
+        return;
+    }
+    
+    if (!category) {
+        showNotification('⚠️ Veuillez sélectionner une catégorie', 'warning');
+        return;
+    }
+    
+    if (!description) {
+        showNotification('⚠️ Veuillez entrer une description', 'warning');
+        return;
+    }
+    
+    if (description.length > 200) {
+        showNotification('⚠️ La description est trop longue (maximum 200 caractères)', 'warning');
+        return;
+    }
+    
+    if (!date) {
+        showNotification('⚠️ Veuillez sélectionner une date', 'warning');
+        return;
+    }
+    
     const transaction = {
         id: Date.now(),
         type: 'income',
-        amount: parseFloat(document.getElementById('incomeAmount').value),
-        category: document.getElementById('incomeCategory').value,
-        description: document.getElementById('incomeDescription').value,
-        date: document.getElementById('incomeDate').value
+        amount: amount,
+        category: category,
+        description: description,
+        date: date
     };
     
     transactions.push(transaction);
@@ -231,6 +280,20 @@ expenseForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
     let categoryValue = expenseCategory.value;
+    const amount = parseFloat(document.getElementById('expenseAmount').value);
+    const description = document.getElementById('expenseDescription').value.trim();
+    const date = document.getElementById('expenseDate').value;
+    
+    // Input validation
+    if (isNaN(amount) || amount <= 0) {
+        showNotification('⚠️ Veuillez entrer un montant valide (supérieur à 0)', 'warning');
+        return;
+    }
+    
+    if (amount > 999999999) {
+        showNotification('⚠️ Le montant est trop élevé', 'warning');
+        return;
+    }
     
     // If custom category is selected, use the custom input value
     if (categoryValue === 'custom') {
@@ -239,15 +302,39 @@ expenseForm.addEventListener('submit', (e) => {
             showNotification('⚠️ Veuillez entrer un nom de catégorie', 'warning');
             return;
         }
+        if (categoryValue.length > 50) {
+            showNotification('⚠️ Le nom de catégorie est trop long (maximum 50 caractères)', 'warning');
+            return;
+        }
+    }
+    
+    if (!categoryValue) {
+        showNotification('⚠️ Veuillez sélectionner une catégorie', 'warning');
+        return;
+    }
+    
+    if (!description) {
+        showNotification('⚠️ Veuillez entrer une description', 'warning');
+        return;
+    }
+    
+    if (description.length > 200) {
+        showNotification('⚠️ La description est trop longue (maximum 200 caractères)', 'warning');
+        return;
+    }
+    
+    if (!date) {
+        showNotification('⚠️ Veuillez sélectionner une date', 'warning');
+        return;
     }
     
     const transaction = {
         id: Date.now(),
         type: 'expense',
-        amount: parseFloat(document.getElementById('expenseAmount').value),
+        amount: amount,
         category: categoryValue,
-        description: document.getElementById('expenseDescription').value,
-        date: document.getElementById('expenseDate').value
+        description: description,
+        date: date
     };
     
     transactions.push(transaction);
@@ -321,21 +408,50 @@ function displayTransactions() {
         return;
     }
     
-    transactionsList.innerHTML = filtered.map(transaction => `
-        <div class="transaction-item ${transaction.type}">
-            <div class="transaction-info">
-                <h4>${transaction.category}</h4>
-                <p>${transaction.description}</p>
-                <p style="font-size: 0.85em; color: #999;">${formatDate(transaction.date)}</p>
-            </div>
-            <div class="transaction-amount">
-                ${transaction.type === 'income' ? '+' : '-'}${formatCurrency(transaction.amount)}
-            </div>
-            <button class="delete-btn" onclick="deleteTransaction(${transaction.id})">
-                🗑️
-            </button>
-        </div>
-    `).join('');
+    // Clear existing transactions
+    transactionsList.innerHTML = '';
+    
+    // Create transaction elements using DOM manipulation to prevent XSS
+    filtered.forEach(transaction => {
+        const transactionDiv = document.createElement('div');
+        transactionDiv.className = `transaction-item ${transaction.type}`;
+        
+        // Transaction info
+        const infoDiv = document.createElement('div');
+        infoDiv.className = 'transaction-info';
+        
+        const categoryH4 = document.createElement('h4');
+        categoryH4.textContent = transaction.category;
+        infoDiv.appendChild(categoryH4);
+        
+        const descriptionP = document.createElement('p');
+        descriptionP.textContent = transaction.description;
+        infoDiv.appendChild(descriptionP);
+        
+        const dateP = document.createElement('p');
+        dateP.style.fontSize = '0.85em';
+        dateP.style.color = '#999';
+        dateP.textContent = formatDate(transaction.date);
+        infoDiv.appendChild(dateP);
+        
+        // Transaction amount
+        const amountDiv = document.createElement('div');
+        amountDiv.className = 'transaction-amount';
+        amountDiv.textContent = `${transaction.type === 'income' ? '+' : '-'}${formatCurrency(transaction.amount)}`;
+        
+        // Delete button
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.textContent = '🗑️';
+        deleteBtn.addEventListener('click', () => deleteTransaction(transaction.id));
+        
+        // Assemble transaction item
+        transactionDiv.appendChild(infoDiv);
+        transactionDiv.appendChild(amountDiv);
+        transactionDiv.appendChild(deleteBtn);
+        
+        transactionsList.appendChild(transactionDiv);
+    });
 }
 
 // Supprimer une transaction
@@ -362,9 +478,19 @@ clearAllBtn.addEventListener('click', () => {
 function updateCategoryFilter() {
     const categories = [...new Set(transactions.map(t => t.category))];
     
-    filterCategory.innerHTML = '<option value="all">Toutes les catégories</option>';
+    // Clear and rebuild options using DOM manipulation
+    filterCategory.innerHTML = '';
+    
+    const allOption = document.createElement('option');
+    allOption.value = 'all';
+    allOption.textContent = 'Toutes les catégories';
+    filterCategory.appendChild(allOption);
+    
     categories.forEach(cat => {
-        filterCategory.innerHTML += `<option value="${cat}">${cat}</option>`;
+        const option = document.createElement('option');
+        option.value = cat;
+        option.textContent = cat;
+        filterCategory.appendChild(option);
     });
 }
 
@@ -684,6 +810,10 @@ const closeChartDetailsModal = document.getElementById('closeChartDetailsModal')
 // Constants
 const MAX_PREVIEW_TRANSACTIONS = 5;
 
+// Custom fields data
+let customFields = safeLoadFromStorage(`customFields_${currentProfile}`, []);
+let customFieldValues = safeLoadFromStorage(`customFieldValues_${currentProfile}`, {});
+
 // Get current month and year
 function getCurrentMonthYear() {
     const now = new Date();
@@ -694,6 +824,40 @@ function getCurrentMonthYear() {
         year: now.getFullYear(),
         key: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
     };
+}
+
+// Create archive object from current transactions
+function createArchiveFromCurrentTransactions() {
+    const { month, year, key } = getCurrentMonthYear();
+    
+    const income = transactions
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + t.amount, 0);
+    const expense = transactions
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0);
+    
+    return {
+        key: key,
+        month: month,
+        year: year,
+        archivedDate: new Date().toISOString(),
+        transactions: [...transactions],
+        summary: {
+            income: income,
+            expense: expense,
+            balance: income - expense,
+            transactionCount: transactions.length
+        }
+    };
+}
+
+// Save archive to localStorage
+function saveArchive(archive) {
+    // Remove existing archive for this month if any
+    archivedMonths = archivedMonths.filter(a => a.key !== archive.key);
+    archivedMonths.unshift(archive);
+    localStorage.setItem(`archived_${currentProfile}`, JSON.stringify(archivedMonths));
 }
 
 // Update month info display
@@ -730,33 +894,10 @@ archiveMonthBtn.addEventListener('click', () => {
             if (!confirm('⚠️ Ce mois a déjà été archivé. Voulez-vous le mettre à jour?')) {
                 return;
             }
-            // Remove existing archive
-            archivedMonths = archivedMonths.filter(a => a.key !== key);
         }
         
-        const income = transactions
-            .filter(t => t.type === 'income')
-            .reduce((sum, t) => sum + t.amount, 0);
-        const expense = transactions
-            .filter(t => t.type === 'expense')
-            .reduce((sum, t) => sum + t.amount, 0);
-        
-        const archive = {
-            key: key,
-            month: month,
-            year: year,
-            archivedDate: new Date().toISOString(),
-            transactions: [...transactions],
-            summary: {
-                income: income,
-                expense: expense,
-                balance: income - expense,
-                transactionCount: transactions.length
-            }
-        };
-        
-        archivedMonths.unshift(archive);
-        localStorage.setItem(`archived_${currentProfile}`, JSON.stringify(archivedMonths));
+        const archive = createArchiveFromCurrentTransactions();
+        saveArchive(archive);
         
         showNotification(`✅ Mois de ${month} ${year} sauvegardé avec succès!`, 'success');
     }
@@ -770,34 +911,11 @@ startNewMonthBtn.addEventListener('click', () => {
     }
     
     if (confirm('🆕 Démarrer un nouveau mois?\n\n⚠️ Cette action va:\n1. Sauvegarder le mois actuel dans les archives\n2. Effacer toutes les transactions actuelles\n3. Vous permettre de démarrer sur une base vierge\n\nContinuer?')) {
-        // First archive the current month
-        const { month, year, key } = getCurrentMonthYear();
+        const { month, year } = getCurrentMonthYear();
         
-        const income = transactions
-            .filter(t => t.type === 'income')
-            .reduce((sum, t) => sum + t.amount, 0);
-        const expense = transactions
-            .filter(t => t.type === 'expense')
-            .reduce((sum, t) => sum + t.amount, 0);
-        
-        const archive = {
-            key: key,
-            month: month,
-            year: year,
-            archivedDate: new Date().toISOString(),
-            transactions: [...transactions],
-            summary: {
-                income: income,
-                expense: expense,
-                balance: income - expense,
-                transactionCount: transactions.length
-            }
-        };
-        
-        // Remove existing archive for this month if any
-        archivedMonths = archivedMonths.filter(a => a.key !== key);
-        archivedMonths.unshift(archive);
-        localStorage.setItem(`archived_${currentProfile}`, JSON.stringify(archivedMonths));
+        // Create and save archive
+        const archive = createArchiveFromCurrentTransactions();
+        saveArchive(archive);
         
         // Clear current transactions
         transactions = [];
@@ -846,52 +964,382 @@ function displayArchives() {
         return;
     }
     
-    archivesList.innerHTML = archivedMonths.map(archive => {
-        const transactionsHTML = archive.transactions
+    // Clear existing content
+    archivesList.innerHTML = '';
+    
+    archivedMonths.forEach(archive => {
+        const archiveItem = document.createElement('div');
+        archiveItem.className = 'archive-item';
+        
+        // Header
+        const h3 = document.createElement('h3');
+        h3.textContent = `📅 ${archive.month} ${archive.year}`;
+        archiveItem.appendChild(h3);
+        
+        // Archive date
+        const dateP = document.createElement('p');
+        dateP.style.color = '#7f8c8d';
+        dateP.style.fontSize = '0.9em';
+        dateP.style.marginBottom = '10px';
+        dateP.textContent = `Archivé le ${new Date(archive.archivedDate).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}`;
+        archiveItem.appendChild(dateP);
+        
+        // Stats
+        const statsDiv = document.createElement('div');
+        statsDiv.className = 'archive-stats';
+        
+        // Income stat
+        const incomeStat = document.createElement('div');
+        incomeStat.className = 'archive-stat income';
+        const incomeLabel = document.createElement('div');
+        incomeLabel.className = 'label';
+        incomeLabel.textContent = 'Revenus';
+        const incomeValue = document.createElement('div');
+        incomeValue.className = 'value';
+        incomeValue.textContent = formatCurrency(archive.summary.income);
+        incomeStat.appendChild(incomeLabel);
+        incomeStat.appendChild(incomeValue);
+        statsDiv.appendChild(incomeStat);
+        
+        // Expense stat
+        const expenseStat = document.createElement('div');
+        expenseStat.className = 'archive-stat expense';
+        const expenseLabel = document.createElement('div');
+        expenseLabel.className = 'label';
+        expenseLabel.textContent = 'Dépenses';
+        const expenseValue = document.createElement('div');
+        expenseValue.className = 'value';
+        expenseValue.textContent = formatCurrency(archive.summary.expense);
+        expenseStat.appendChild(expenseLabel);
+        expenseStat.appendChild(expenseValue);
+        statsDiv.appendChild(expenseStat);
+        
+        // Balance stat
+        const balanceStat = document.createElement('div');
+        balanceStat.className = 'archive-stat balance';
+        const balanceLabel = document.createElement('div');
+        balanceLabel.className = 'label';
+        balanceLabel.textContent = 'Solde';
+        const balanceValue = document.createElement('div');
+        balanceValue.className = 'value';
+        balanceValue.textContent = formatCurrency(archive.summary.balance);
+        balanceStat.appendChild(balanceLabel);
+        balanceStat.appendChild(balanceValue);
+        statsDiv.appendChild(balanceStat);
+        
+        // Transaction count stat
+        const countStat = document.createElement('div');
+        countStat.className = 'archive-stat';
+        const countLabel = document.createElement('div');
+        countLabel.className = 'label';
+        countLabel.textContent = 'Transactions';
+        const countValue = document.createElement('div');
+        countValue.className = 'value';
+        countValue.textContent = archive.summary.transactionCount.toString();
+        countStat.appendChild(countLabel);
+        countStat.appendChild(countValue);
+        statsDiv.appendChild(countStat);
+        
+        archiveItem.appendChild(statsDiv);
+        
+        // Transactions preview
+        const transactionsDiv = document.createElement('div');
+        transactionsDiv.className = 'archive-transactions';
+        
+        const transH4 = document.createElement('h4');
+        transH4.textContent = '🔍 Aperçu des transactions:';
+        transactionsDiv.appendChild(transH4);
+        
+        // Add transaction previews
+        archive.transactions
             .slice(0, MAX_PREVIEW_TRANSACTIONS)
-            .map(t => `
-                <div class="archive-transaction ${t.type}">
-                    <span>${t.category} - ${t.description}</span>
-                    <span>${t.type === 'income' ? '+' : '-'}${formatCurrency(t.amount)}</span>
-                </div>
-            `).join('');
+            .forEach(t => {
+                const transDiv = document.createElement('div');
+                transDiv.className = `archive-transaction ${t.type}`;
+                
+                const descSpan = document.createElement('span');
+                descSpan.textContent = `${t.category} - ${t.description}`;
+                transDiv.appendChild(descSpan);
+                
+                const amountSpan = document.createElement('span');
+                amountSpan.textContent = `${t.type === 'income' ? '+' : '-'}${formatCurrency(t.amount)}`;
+                transDiv.appendChild(amountSpan);
+                
+                transactionsDiv.appendChild(transDiv);
+            });
         
+        // More count if needed
         const moreCount = archive.transactions.length - MAX_PREVIEW_TRANSACTIONS;
+        if (moreCount > 0) {
+            const moreP = document.createElement('p');
+            moreP.style.textAlign = 'center';
+            moreP.style.color = '#7f8c8d';
+            moreP.style.marginTop = '10px';
+            moreP.textContent = `... et ${moreCount} autre${moreCount > 1 ? 's' : ''} transaction${moreCount > 1 ? 's' : ''}`;
+            transactionsDiv.appendChild(moreP);
+        }
         
-        return `
-            <div class="archive-item">
-                <h3>📅 ${archive.month} ${archive.year}</h3>
-                <p style="color: #7f8c8d; font-size: 0.9em; margin-bottom: 10px;">
-                    Archivé le ${new Date(archive.archivedDate).toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' })}
-                </p>
-                <div class="archive-stats">
-                    <div class="archive-stat income">
-                        <div class="label">Revenus</div>
-                        <div class="value">${formatCurrency(archive.summary.income)}</div>
-                    </div>
-                    <div class="archive-stat expense">
-                        <div class="label">Dépenses</div>
-                        <div class="value">${formatCurrency(archive.summary.expense)}</div>
-                    </div>
-                    <div class="archive-stat balance">
-                        <div class="label">Solde</div>
-                        <div class="value">${formatCurrency(archive.summary.balance)}</div>
-                    </div>
-                    <div class="archive-stat">
-                        <div class="label">Transactions</div>
-                        <div class="value">${archive.summary.transactionCount}</div>
-                    </div>
-                </div>
-                <div class="archive-transactions">
-                    <h4>🔍 Aperçu des transactions:</h4>
-                    ${transactionsHTML}
-                    ${moreCount > 0 ? `<p style="text-align: center; color: #7f8c8d; margin-top: 10px;">... et ${moreCount} autre${moreCount > 1 ? 's' : ''} transaction${moreCount > 1 ? 's' : ''}</p>` : ''}
-                </div>
-            </div>
-        `;
-    }).join('');
+        archiveItem.appendChild(transactionsDiv);
+        archivesList.appendChild(archiveItem);
+    });
+}
+
+// Custom Fields Management
+customizeFieldsBtn.addEventListener('click', () => {
+    displayCustomFieldsModal();
+    customFieldsModal.style.display = 'block';
+});
+
+closeCustomFieldsModal.addEventListener('click', () => {
+    customFieldsModal.style.display = 'none';
+});
+
+function displayCustomFieldsModal() {
+    const customFieldsList = document.getElementById('customFieldsList');
+    customFieldsList.innerHTML = '';
+    
+    if (customFields.length === 0) {
+        const emptyDiv = document.createElement('div');
+        emptyDiv.className = 'empty-state';
+        const emptyP = document.createElement('p');
+        emptyP.textContent = 'Aucun champ personnalisé défini. Ajoutez-en un ci-dessous.';
+        emptyDiv.appendChild(emptyP);
+        customFieldsList.appendChild(emptyDiv);
+        return;
+    }
+    
+    customFields.forEach((field, index) => {
+        const fieldDiv = document.createElement('div');
+        fieldDiv.className = 'custom-field-item';
+        fieldDiv.style.cssText = 'padding: 15px; margin-bottom: 10px; background: #f8f9fa; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;';
+        
+        const infoDiv = document.createElement('div');
+        
+        const fieldName = document.createElement('strong');
+        fieldName.textContent = field.name;
+        fieldName.style.display = 'block';
+        infoDiv.appendChild(fieldName);
+        
+        const fieldType = document.createElement('small');
+        fieldType.textContent = `Type: ${field.type}`;
+        fieldType.style.color = '#7f8c8d';
+        infoDiv.appendChild(fieldType);
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = '🗑️ Supprimer';
+        deleteBtn.className = 'btn';
+        deleteBtn.style.cssText = 'background: #e74c3c; color: white; padding: 5px 10px; font-size: 0.9em;';
+        deleteBtn.addEventListener('click', () => removeCustomField(index));
+        
+        fieldDiv.appendChild(infoDiv);
+        fieldDiv.appendChild(deleteBtn);
+        customFieldsList.appendChild(fieldDiv);
+    });
+}
+
+function removeCustomField(index) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce champ personnalisé?')) {
+        const fieldName = customFields[index].name;
+        customFields.splice(index, 1);
+        delete customFieldValues[fieldName];
+        saveCustomFields();
+        displayCustomFieldsModal();
+        displayCustomFieldsValues();
+        showNotification('Champ supprimé avec succès', 'success');
+    }
+}
+
+addCustomFieldBtn.addEventListener('click', () => {
+    const fieldName = document.getElementById('newFieldName').value.trim();
+    const fieldType = document.getElementById('newFieldType').value;
+    
+    if (!fieldName) {
+        showNotification('⚠️ Veuillez entrer un nom de champ', 'warning');
+        return;
+    }
+    
+    if (fieldName.length > 50) {
+        showNotification('⚠️ Le nom du champ est trop long (maximum 50 caractères)', 'warning');
+        return;
+    }
+    
+    // Check if field already exists
+    if (customFields.some(f => f.name === fieldName)) {
+        showNotification('⚠️ Un champ avec ce nom existe déjà', 'warning');
+        return;
+    }
+    
+    customFields.push({ name: fieldName, type: fieldType });
+    customFieldValues[fieldName] = '';
+    saveCustomFields();
+    
+    // Clear inputs
+    document.getElementById('newFieldName').value = '';
+    document.getElementById('newFieldType').value = 'text';
+    
+    displayCustomFieldsModal();
+    displayCustomFieldsValues();
+    showNotification('Champ ajouté avec succès', 'success');
+});
+
+function saveCustomFields() {
+    localStorage.setItem(`customFields_${currentProfile}`, JSON.stringify(customFields));
+    localStorage.setItem(`customFieldValues_${currentProfile}`, JSON.stringify(customFieldValues));
+}
+
+function displayCustomFieldsValues() {
+    if (customFields.length === 0) {
+        customFieldsDisplay.innerHTML = '';
+        return;
+    }
+    
+    customFieldsDisplay.innerHTML = '';
+    
+    const container = document.createElement('div');
+    container.style.cssText = 'margin-top: 20px; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
+    
+    const title = document.createElement('h3');
+    title.textContent = '📝 Champs Personnalisés';
+    container.appendChild(title);
+    
+    customFields.forEach(field => {
+        const fieldGroup = document.createElement('div');
+        fieldGroup.style.cssText = 'margin: 15px 0;';
+        
+        const label = document.createElement('label');
+        label.textContent = field.name;
+        label.style.cssText = 'display: block; font-weight: bold; margin-bottom: 5px;';
+        fieldGroup.appendChild(label);
+        
+        let input;
+        if (field.type === 'textarea') {
+            input = document.createElement('textarea');
+            input.rows = 3;
+        } else {
+            input = document.createElement('input');
+            input.type = field.type === 'currency' ? 'number' : field.type;
+            if (field.type === 'currency') {
+                input.step = '0.01';
+                input.min = '0';
+            }
+        }
+        
+        input.value = customFieldValues[field.name] || '';
+        input.style.cssText = 'width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 1em;';
+        input.addEventListener('change', (e) => {
+            customFieldValues[field.name] = e.target.value;
+            saveCustomFields();
+        });
+        
+        fieldGroup.appendChild(input);
+        container.appendChild(fieldGroup);
+    });
+    
+    customFieldsDisplay.appendChild(container);
+}
+
+// Chart Details Modal Implementation
+closeChartDetailsModal.addEventListener('click', () => {
+    chartDetailsModal.style.display = 'none';
+});
+
+function showChartDetails() {
+    const chartDetailsContent = document.getElementById('chartDetailsContent');
+    chartDetailsContent.innerHTML = '';
+    
+    const expenses = transactions.filter(t => t.type === 'expense');
+    
+    if (expenses.length === 0) {
+        chartDetailsContent.innerHTML = '<p>Aucune dépense à afficher</p>';
+        chartDetailsModal.style.display = 'block';
+        return;
+    }
+    
+    // Group by category
+    const expensesByCategory = {};
+    expenses.forEach(t => {
+        if (!expensesByCategory[t.category]) {
+            expensesByCategory[t.category] = [];
+        }
+        expensesByCategory[t.category].push(t);
+    });
+    
+    // Calculate totals
+    const total = expenses.reduce((sum, t) => sum + t.amount, 0);
+    
+    // Sort categories by amount
+    const sortedCategories = Object.entries(expensesByCategory)
+        .map(([category, transactions]) => ({
+            category,
+            transactions,
+            total: transactions.reduce((sum, t) => sum + t.amount, 0)
+        }))
+        .sort((a, b) => b.total - a.total);
+    
+    // Create detailed view
+    sortedCategories.forEach(({ category, transactions, total: categoryTotal }) => {
+        const categoryDiv = document.createElement('div');
+        categoryDiv.style.cssText = 'margin-bottom: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;';
+        
+        const categoryHeader = document.createElement('div');
+        categoryHeader.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;';
+        
+        const categoryName = document.createElement('h3');
+        categoryName.textContent = category;
+        categoryName.style.margin = '0';
+        
+        const categoryStats = document.createElement('div');
+        categoryStats.style.textAlign = 'right';
+        
+        const categoryAmount = document.createElement('div');
+        categoryAmount.textContent = formatCurrency(categoryTotal);
+        categoryAmount.style.cssText = 'font-size: 1.5em; font-weight: bold; color: #e74c3c;';
+        
+        const categoryPercentage = document.createElement('div');
+        categoryPercentage.textContent = `${((categoryTotal / total) * 100).toFixed(1)}% du total`;
+        categoryPercentage.style.color = '#7f8c8d';
+        
+        categoryStats.appendChild(categoryAmount);
+        categoryStats.appendChild(categoryPercentage);
+        
+        categoryHeader.appendChild(categoryName);
+        categoryHeader.appendChild(categoryStats);
+        categoryDiv.appendChild(categoryHeader);
+        
+        // List transactions
+        const transactionsList = document.createElement('div');
+        transactions.forEach(t => {
+            const transDiv = document.createElement('div');
+            transDiv.style.cssText = 'display: flex; justify-content: space-between; padding: 10px; margin: 5px 0; background: white; border-radius: 5px;';
+            
+            const descDiv = document.createElement('div');
+            const descSpan = document.createElement('span');
+            descSpan.textContent = t.description;
+            descSpan.style.fontWeight = 'bold';
+            descDiv.appendChild(descSpan);
+            
+            const dateSpan = document.createElement('span');
+            dateSpan.textContent = ` - ${formatDate(t.date)}`;
+            dateSpan.style.cssText = 'color: #7f8c8d; font-size: 0.9em;';
+            descDiv.appendChild(dateSpan);
+            
+            const amountDiv = document.createElement('div');
+            amountDiv.textContent = formatCurrency(t.amount);
+            amountDiv.style.cssText = 'font-weight: bold; color: #e74c3c;';
+            
+            transDiv.appendChild(descDiv);
+            transDiv.appendChild(amountDiv);
+            transactionsList.appendChild(transDiv);
+        });
+        
+        categoryDiv.appendChild(transactionsList);
+        chartDetailsContent.appendChild(categoryDiv);
+    });
+    
+    chartDetailsModal.style.display = 'block';
 }
 
 // Initialiser
 updateUI();
 updateMonthInfo();
+displayCustomFieldsValues();
