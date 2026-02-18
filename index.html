@@ -153,8 +153,16 @@
         <!-- Monthly Operations -->
         <section class="monthly-operations">
             <h2>📅 Gestion Mensuelle</h2>
+            
+            <!-- Month Selector for Archive -->
+            <div class="month-selector-container">
+                <label for="archiveMonthSelect">📆 Choisir le mois à sauvegarder:</label>
+                <input type="month" id="archiveMonthSelect" class="month-select-input">
+                <p class="month-hint">Laissez vide pour sauvegarder le mois en cours</p>
+            </div>
+            
             <div class="monthly-controls">
-                <button class="btn btn-archive" id="archiveMonth">💾 Sauvegarder le Mois en Cours</button>
+                <button class="btn btn-archive" id="archiveMonth">💾 Sauvegarder le Mois</button>
                 <button class="btn btn-new-month" id="startNewMonth">🆕 Démarrer un Nouveau Mois</button>
                 <button class="btn btn-view-archives" id="viewArchives">📚 Voir les Archives</button>
                 <button class="btn btn-customize-fields" id="customizeFields">⚙️ Personnaliser les Champs</button>

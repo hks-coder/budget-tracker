@@ -7,6 +7,11 @@ const PIN_CODES = {
     'jullian': '1991'
 };
 
+// Constants
+const MONTH_NAMES = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                     'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+const BAR_CHART_HEIGHT_PERCENTAGE = 85; // Reserve 15% for category labels below bars
+
 // PIN Modal Elements
 const pinModal = document.getElementById('pinModal');
 const pinProfileSelect = document.getElementById('pinProfileSelect');
@@ -585,16 +590,16 @@ function updateExpenseChart() {
     // Constants for bar chart styling
     const MIN_BAR_HEIGHT = 60; // Minimum height in pixels to ensure labels are readable
     
-    // Create vertical bar chart
-    chartHTML += '<div style="display: flex; align-items: flex-end; justify-content: space-around; height: 400px; padding: 20px; background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); gap: 15px;">';
+    // Create vertical bar chart with mobile-friendly container
+    chartHTML += '<div class="bar-chart-container">';
     
     // Note: segment.color comes from a predefined colors array (lines 421-434), ensuring safety
     pieSegments.forEach((segment, index) => {
         const barHeight = (segment.amount / maxAmount) * 100;
         
         chartHTML += `
-            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; max-width: 120px;">
-                <div style="width: 100%; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 350px;">
+            <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-width: 80px; max-width: 120px;">
+                <div style="width: 100%; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: ${BAR_CHART_HEIGHT_PERCENTAGE}%;">
                     <div class="vertical-bar" style="
                         position: absolute;
                         bottom: 0;
@@ -619,7 +624,7 @@ function updateExpenseChart() {
                         <div style="font-size: 0.8em; margin-top: 5px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">${segment.percentage}%</div>
                     </div>
                 </div>
-                <div style="margin-top: 10px; font-weight: 600; color: #2c3e50; text-align: center; font-size: 0.85em; word-wrap: break-word; max-width: 100%;">
+                <div style="margin-top: 10px; font-weight: 600; color: #2c3e50; text-align: center; font-size: 0.85em; word-wrap: break-word; width: 100%;">
                     ${segment.category}
                 </div>
             </div>
@@ -627,6 +632,11 @@ function updateExpenseChart() {
     });
     
     chartHTML += '</div>';
+    
+    // Add scroll hint for mobile if there are many categories
+    if (categories.length > 4) {
+        chartHTML += '<p style="text-align: center; color: #7f8c8d; font-size: 0.9em; margin-top: 10px;">💡 Faites défiler horizontalement pour voir toutes les catégories</p>';
+    }
     
     // Add button to view details
     chartHTML += `
@@ -713,18 +723,34 @@ let customFieldValues = safeLoadFromStorage(`customFieldValues_${currentProfile}
 // Get current month and year
 function getCurrentMonthYear() {
     const now = new Date();
-    const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-                       'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
     return {
-        month: monthNames[now.getMonth()],
+        month: MONTH_NAMES[now.getMonth()],
         year: now.getFullYear(),
         key: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
     };
 }
 
+// Get month and year from date input or current date
+function getMonthYearFromInput(dateValue) {
+    let date;
+    if (dateValue) {
+        // dateValue is in format "YYYY-MM"
+        const [year, month] = dateValue.split('-');
+        date = new Date(parseInt(year), parseInt(month) - 1, 1);
+    } else {
+        date = new Date();
+    }
+    
+    return {
+        month: MONTH_NAMES[date.getMonth()],
+        year: date.getFullYear(),
+        key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+    };
+}
+
 // Create archive object from current transactions
-function createArchiveFromCurrentTransactions() {
-    const { month, year, key } = getCurrentMonthYear();
+function createArchiveFromCurrentTransactions(selectedMonth = null) {
+    const { month, year, key } = selectedMonth ? getMonthYearFromInput(selectedMonth) : getCurrentMonthYear();
     
     const income = transactions
         .filter(t => t.type === 'income')
@@ -781,9 +807,14 @@ archiveMonthBtn.addEventListener('click', () => {
         return;
     }
     
-    if (confirm('💾 Sauvegarder le mois en cours dans les archives?\nLes transactions actuelles resteront visibles.')) {
-        const { month, year, key } = getCurrentMonthYear();
-        
+    // Get selected month from input
+    const archiveMonthInput = document.getElementById('archiveMonthSelect');
+    const selectedMonth = archiveMonthInput.value;
+    
+    const { month, year, key } = selectedMonth ? getMonthYearFromInput(selectedMonth) : getCurrentMonthYear();
+    const monthLabel = selectedMonth ? `${month} ${year}` : 'le mois en cours';
+    
+    if (confirm(`💾 Sauvegarder ${monthLabel} dans les archives?\nLes transactions actuelles resteront visibles.`)) {
         // Check if this month is already archived
         const existingArchive = archivedMonths.find(a => a.key === key);
         if (existingArchive) {
@@ -792,10 +823,13 @@ archiveMonthBtn.addEventListener('click', () => {
             }
         }
         
-        const archive = createArchiveFromCurrentTransactions();
+        const archive = createArchiveFromCurrentTransactions(selectedMonth);
         saveArchive(archive);
         
         showNotification(`✅ Mois de ${month} ${year} sauvegardé avec succès!`, 'success');
+        
+        // Clear the month selector after successful save
+        archiveMonthInput.value = '';
     }
 });
 
