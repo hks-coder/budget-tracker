@@ -7,6 +7,11 @@ const PIN_CODES = {
     'jullian': '1991'
 };
 
+// Constants
+const MONTH_NAMES = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+                     'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+const BAR_CHART_HEIGHT_PERCENTAGE = 85; // Reserve 15% for category labels below bars
+
 // PIN Modal Elements
 const pinModal = document.getElementById('pinModal');
 const pinProfileSelect = document.getElementById('pinProfileSelect');
@@ -594,7 +599,7 @@ function updateExpenseChart() {
         
         chartHTML += `
             <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-width: 80px; max-width: 120px;">
-                <div style="width: 100%; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 85%;">
+                <div style="width: 100%; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: ${BAR_CHART_HEIGHT_PERCENTAGE}%;">
                     <div class="vertical-bar" style="
                         position: absolute;
                         bottom: 0;
@@ -718,10 +723,8 @@ let customFieldValues = safeLoadFromStorage(`customFieldValues_${currentProfile}
 // Get current month and year
 function getCurrentMonthYear() {
     const now = new Date();
-    const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-                       'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
     return {
-        month: monthNames[now.getMonth()],
+        month: MONTH_NAMES[now.getMonth()],
         year: now.getFullYear(),
         key: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
     };
@@ -738,10 +741,8 @@ function getMonthYearFromInput(dateValue) {
         date = new Date();
     }
     
-    const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-                       'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
     return {
-        month: monthNames[date.getMonth()],
+        month: MONTH_NAMES[date.getMonth()],
         year: date.getFullYear(),
         key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
     };
