@@ -1032,6 +1032,14 @@ function displayArchives() {
         }
         
         archiveItem.appendChild(transactionsDiv);
+        
+        // Add export button for this archive
+        const exportBtn = document.createElement('button');
+        exportBtn.className = 'btn-export-archive';
+        exportBtn.textContent = '📊 Exporter en Excel';
+        exportBtn.addEventListener('click', () => exportArchiveToExcel(archive));
+        archiveItem.appendChild(exportBtn);
+        
         archivesList.appendChild(archiveItem);
     });
 }
@@ -1289,6 +1297,141 @@ function showChartDetails() {
     });
     
     chartDetailsModal.style.display = 'block';
+}
+
+// Excel Export Functions (using CSV format compatible with Excel)
+// Helper function to escape CSV field values
+function escapeCSVField(field) {
+    if (field === null || field === undefined) {
+        return '';
+    }
+    const value = String(field);
+    // If field contains comma, quote, newline, or carriage return, wrap it in quotes and escape internal quotes
+    if (value.includes(',') || value.includes('"') || value.includes('\n') || value.includes('\r')) {
+        return '"' + value.replace(/"/g, '""') + '"';
+    }
+    return value;
+}
+
+// Helper function to sanitize filename components
+function sanitizeFilename(value, defaultValue = 'Unknown') {
+    return String(value || defaultValue).replace(/[^a-zA-Z0-9_]/g, '_');
+}
+
+function exportArchiveToExcel(archive) {
+    try {
+        // Create CSV content
+        let csvContent = '';
+        
+        // Add summary section
+        csvContent += 'Résumé du Mois\n';
+        csvContent += `Mois,${escapeCSVField(archive.month)}\n`;
+        csvContent += `Année,${archive.year}\n`;
+        csvContent += `Date d'archivage,${new Date(archive.archivedDate).toLocaleDateString('fr-FR')}\n`;
+        csvContent += '\n';
+        csvContent += 'Résumé Financier\n';
+        csvContent += `Revenus,${archive.summary.income} €\n`;
+        csvContent += `Dépenses,${archive.summary.expense} €\n`;
+        csvContent += `Solde,${archive.summary.balance} €\n`;
+        csvContent += `Nombre de transactions,${archive.summary.transactionCount}\n`;
+        csvContent += '\n\n';
+        
+        // Add transactions section
+        if (archive.transactions && archive.transactions.length > 0) {
+            csvContent += 'Transactions\n';
+            csvContent += 'Date,Type,Catégorie,Description,Montant (€)\n';
+            
+            archive.transactions.forEach(t => {
+                csvContent += `${escapeCSVField(formatDate(t.date))},${escapeCSVField(t.type === 'income' ? 'Revenu' : 'Dépense')},${escapeCSVField(t.category)},${escapeCSVField(t.description)},${t.amount}\n`;
+            });
+        }
+        
+        // Create blob and download
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' }); // UTF-8 BOM for Excel
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        // Sanitize filename components (no hyphens to avoid command-line flag issues)
+        const safeMonth = sanitizeFilename(archive.month);
+        const safeYear = sanitizeFilename(archive.year);
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', `Budget_${safeMonth}_${safeYear}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showNotification(`✅ Archive exportée: Budget_${archive.month}_${archive.year}.csv`, 'success');
+    } catch (error) {
+        console.error('Error exporting archive:', error);
+        showNotification('❌ Erreur lors de l\'exportation', 'error');
+    }
+}
+
+function exportAllArchivesToExcel() {
+    if (archivedMonths.length === 0) {
+        showNotification('⚠️ Aucune archive à exporter', 'warning');
+        return;
+    }
+    
+    try {
+        // Create CSV content
+        let csvContent = '';
+        
+        // Add summary of all archives
+        csvContent += 'Résumé de Toutes les Archives\n';
+        csvContent += 'Mois,Année,Revenus (€),Dépenses (€),Solde (€),Transactions\n';
+        
+        archivedMonths.forEach(archive => {
+            csvContent += `${escapeCSVField(archive.month)},${archive.year},${archive.summary.income},${archive.summary.expense},${archive.summary.balance},${archive.summary.transactionCount}\n`;
+        });
+        
+        csvContent += '\n\n';
+        
+        // Add transactions for each archive
+        archivedMonths.forEach(archive => {
+            csvContent += `\nArchive: ${escapeCSVField(archive.month)} ${archive.year}\n`;
+            csvContent += `Date d'archivage: ${new Date(archive.archivedDate).toLocaleDateString('fr-FR')}\n`;
+            csvContent += '\n';
+            
+            if (archive.transactions && archive.transactions.length > 0) {
+                csvContent += 'Date,Type,Catégorie,Description,Montant (€)\n';
+                
+                archive.transactions.forEach(t => {
+                    csvContent += `${escapeCSVField(formatDate(t.date))},${escapeCSVField(t.type === 'income' ? 'Revenu' : 'Dépense')},${escapeCSVField(t.category)},${escapeCSVField(t.description)},${t.amount}\n`;
+                });
+                
+                csvContent += '\n';
+            }
+        });
+        
+        // Create blob and download
+        const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' }); // UTF-8 BOM for Excel
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        
+        // Sanitize profile name for filename (no hyphens to avoid command-line flag issues)
+        const safeProfile = sanitizeFilename(currentProfile, 'default');
+        
+        link.setAttribute('href', url);
+        link.setAttribute('download', `Budget_Toutes_Archives_${safeProfile}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        showNotification(`✅ Toutes les archives exportées: Budget_Toutes_Archives_${currentProfile}.csv`, 'success');
+    } catch (error) {
+        console.error('Error exporting all archives:', error);
+        showNotification('❌ Erreur lors de l\'exportation de toutes les archives', 'error');
+    }
+}
+
+// Add event listener for export all button
+const exportAllArchivesBtn = document.getElementById('exportAllArchives');
+if (exportAllArchivesBtn) {
+    exportAllArchivesBtn.addEventListener('click', exportAllArchivesToExcel);
 }
 
 // Initialiser
