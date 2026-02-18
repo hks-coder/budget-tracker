@@ -1503,7 +1503,10 @@ function importProfileData() {
                 transactions = importedData.transactions;
                 archivedMonths = importedData.archivedMonths;
                 customFields = Array.isArray(importedData.customFields) ? importedData.customFields : [];
-                customFieldValues = typeof importedData.customFieldValues === 'object' ? importedData.customFieldValues : {};
+                customFieldValues = (importedData.customFieldValues && 
+                                    typeof importedData.customFieldValues === 'object' && 
+                                    !Array.isArray(importedData.customFieldValues)) ? 
+                                    importedData.customFieldValues : {};
                 
                 // Save to localStorage
                 saveTransactions();
