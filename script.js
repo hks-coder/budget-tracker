@@ -559,128 +559,25 @@ function updateExpenseChart() {
         '#1ABC9C'
     ];
     
-    // Créer le graphique en camembert (pie chart) avec CSS
+    // Créer le graphique des dépenses par catégorie
     let chartHTML = '<h2>📊 Dépenses par Catégorie</h2>';
-    chartHTML += '<div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 40px; padding: 20px;">';
     
-    // Créer le cercle du graphique
-    chartHTML += '<div style="position: relative; width: 300px; height: 300px;">';
-    
-    // Créer les segments du pie chart avec du CSS
-    let currentAngle = 0;
+    // Préparer les segments pour le graphique
     const pieSegments = categories.map((category, index) => {
         const amount = expensesByCategory[category];
         const percentage = (amount / totalExpenses) * 100;
-        const angle = (percentage / 100) * 360;
         const color = colors[index % colors.length];
-        
-        // Calculer les coordonnées pour créer un segment
-        const startAngle = currentAngle;
-        const endAngle = currentAngle + angle;
-        currentAngle = endAngle;
         
         return {
             category,
             amount,
             percentage: percentage.toFixed(1),
-            color,
-            startAngle,
-            endAngle
+            color
         };
     });
     
-    // Créer le graphique en utilisant des divs avec border-radius et clip-path
-    pieSegments.forEach((segment, index) => {
-        const rotation = segment.startAngle;
-        const segmentAngle = segment.endAngle - segment.startAngle;
-        
-        // Pour des angles <= 180 degrés
-        if (segmentAngle <= 180) {
-            chartHTML += `
-                <div style="
-                    position: absolute;
-                    width: 150px;
-                    height: 150px;
-                    top: 0;
-                    left: 150px;
-                    transform-origin: 0% 100%;
-                    transform: rotate(${rotation}deg) skewY(${90 - segmentAngle}deg);
-                    background: ${segment.color};
-                    border-radius: 0 100% 0 0;
-                "></div>
-            `;
-        } else {
-            // Pour des angles > 180 degrés, diviser en deux segments
-            chartHTML += `
-                <div style="
-                    position: absolute;
-                    width: 150px;
-                    height: 150px;
-                    top: 0;
-                    left: 150px;
-                    transform-origin: 0% 100%;
-                    transform: rotate(${rotation}deg);
-                    background: ${segment.color};
-                    border-radius: 0 100% 0 0;
-                "></div>
-                <div style="
-                    position: absolute;
-                    width: 150px;
-                    height: 150px;
-                    top: 0;
-                    left: 150px;
-                    transform-origin: 0% 100%;
-                    transform: rotate(${rotation + 180}deg) skewY(${270 - segmentAngle}deg);
-                    background: ${segment.color};
-                    border-radius: 0 100% 0 0;
-                "></div>
-            `;
-        }
-    });
-    
-    // Ajouter un cercle blanc au centre pour faire un donut chart
-    chartHTML += `
-        <div style="
-            position: absolute;
-            width: 120px;
-            height: 120px;
-            top: 90px;
-            left: 90px;
-            background: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        ">
-            <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 5px;">Total</div>
-            <div style="font-size: 1.3em; font-weight: bold; color: #2c3e50;">${formatCurrency(totalExpenses)}</div>
-        </div>
-    `;
-    
-    chartHTML += '</div>';
-    
-    // Ajouter la légende
-    chartHTML += '<div style="flex: 1; min-width: 200px;">';
-    pieSegments.forEach(segment => {
-        chartHTML += `
-            <div style="display: flex; align-items: center; margin-bottom: 12px; padding: 8px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <div style="width: 20px; height: 20px; background: ${segment.color}; border-radius: 4px; margin-right: 12px; flex-shrink: 0;"></div>
-                <div style="flex: 1;">
-                    <div style="font-weight: 600; color: #2c3e50; margin-bottom: 2px;">${segment.category}</div>
-                    <div style="font-size: 0.9em; color: #7f8c8d;">${formatCurrency(segment.amount)} (${segment.percentage}%)</div>
-                </div>
-            </div>
-        `;
-    });
-    chartHTML += '</div>';
-    
-    chartHTML += '</div>';
-    
     // Add vertical bar chart
-    chartHTML += '<div style="margin-top: 50px; padding-top: 30px; border-top: 2px solid #e0e0e0;">';
-    chartHTML += '<h2 style="text-align: center; color: #2c3e50; margin-bottom: 30px;">📊 Graphique Vertical des Dépenses</h2>';
+    chartHTML += '<h2 style="text-align: center; color: #2c3e50; margin-bottom: 30px; margin-top: 20px;">📊 Graphique Vertical des Dépenses</h2>';
     
     // Find the maximum amount for scaling
     const maxAmount = Math.max(...Object.values(expensesByCategory));
@@ -729,7 +626,6 @@ function updateExpenseChart() {
         `;
     });
     
-    chartHTML += '</div>';
     chartHTML += '</div>';
     
     // Add button to view details
