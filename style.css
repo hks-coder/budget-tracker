@@ -1023,6 +1023,10 @@ header p {
 }
 
 /* Vertical Bar Chart Styles */
+.vertical-bar {
+    will-change: transform, opacity;
+}
+
 .vertical-bar:hover {
     opacity: 0.8;
     transform: translateY(-5px);
