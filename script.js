@@ -26,6 +26,8 @@ let profileLocked = localStorage.getItem('profileLocked') === 'true';
 // Données
 let transactions = JSON.parse(localStorage.getItem(`transactions_${currentProfile}`)) || [];
 let archivedMonths = JSON.parse(localStorage.getItem(`archived_${currentProfile}`)) || [];
+let bankAccounts = JSON.parse(localStorage.getItem(`bankAccounts_${currentProfile}`)) || [];
+let pendingImports = [];
 
 // Éléments du DOM
 const profileSelect = document.getElementById('profileSelect');
@@ -42,6 +44,15 @@ const clearAllBtn = document.getElementById('clearAll');
 const expenseCategory = document.getElementById('expenseCategory');
 const customCategoryGroup = document.getElementById('customCategoryGroup');
 const customCategory = document.getElementById('customCategory');
+
+// Bank Account Elements
+const bankAccountForm = document.getElementById('bankAccountForm');
+const linkedAccountsList = document.getElementById('linkedAccountsList');
+const importModal = document.getElementById('importModal');
+const closeImportModal = document.getElementById('closeImportModal');
+const importTransactionsList = document.getElementById('importTransactionsList');
+const confirmImportBtn = document.getElementById('confirmImport');
+const cancelImportBtn = document.getElementById('cancelImport');
 
 // Initialiser la date d'aujourd'hui
 document.getElementById('incomeDate').valueAsDate = new Date();
@@ -192,11 +203,228 @@ function switchProfile(newProfile) {
     // Load new profile's transactions and archives
     transactions = JSON.parse(localStorage.getItem(`transactions_${currentProfile}`)) || [];
     archivedMonths = JSON.parse(localStorage.getItem(`archived_${currentProfile}`)) || [];
+    bankAccounts = JSON.parse(localStorage.getItem(`bankAccounts_${currentProfile}`)) || [];
     
     // Update UI
     updateUI();
     updateHeaderProfileInfo();
+    displayLinkedAccounts();
 }
+
+// Bank Account Management Functions
+bankAccountForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    const bankAccount = {
+        id: Date.now(),
+        bankName: document.getElementById('bankName').value,
+        accountNumber: document.getElementById('accountNumber').value,
+        accountType: document.getElementById('accountType').value,
+        linkedDate: new Date().toISOString()
+    };
+    
+    bankAccounts.push(bankAccount);
+    saveBankAccounts();
+    bankAccountForm.reset();
+    displayLinkedAccounts();
+    
+    showNotification('✅ Compte bancaire lié avec succès !', 'success');
+});
+
+function saveBankAccounts() {
+    localStorage.setItem(`bankAccounts_${currentProfile}`, JSON.stringify(bankAccounts));
+}
+
+function displayLinkedAccounts() {
+    if (bankAccounts.length === 0) {
+        linkedAccountsList.innerHTML = `
+            <div class="empty-state" style="padding: 20px;">
+                <p style="font-size: 1em;">📭 Aucun compte bancaire lié</p>
+            </div>
+        `;
+        return;
+    }
+    
+    linkedAccountsList.innerHTML = bankAccounts.map(account => `
+        <div class="bank-account-item">
+            <div class="bank-account-info">
+                <h4>🏦 ${account.bankName}</h4>
+                <p>Type: ${account.accountType}</p>
+                <p>Compte: ****${account.accountNumber}</p>
+                <p style="font-size: 0.85em; color: #999;">Lié le ${formatDate(account.linkedDate.split('T')[0])}</p>
+            </div>
+            <div class="bank-account-actions">
+                <button class="btn-import" onclick="importTransactions(${account.id})">
+                    📥 Importer
+                </button>
+                <button class="delete-btn" onclick="deleteBankAccount(${account.id})">
+                    🗑️
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function deleteBankAccount(id) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce compte bancaire ?')) {
+        bankAccounts = bankAccounts.filter(acc => acc.id !== id);
+        saveBankAccounts();
+        displayLinkedAccounts();
+        showNotification('Compte bancaire supprimé', 'info');
+    }
+}
+
+function importTransactions(accountId) {
+    const account = bankAccounts.find(acc => acc.id === accountId);
+    if (!account) return;
+    
+    // Simulate importing transactions from bank
+    // In a real application, this would call a bank API
+    pendingImports = generateSampleTransactions(account);
+    
+    displayImportModal();
+}
+
+function generateSampleTransactions(account) {
+    // Generate sample transactions to simulate bank import
+    const today = new Date();
+    const sampleTransactions = [
+        {
+            id: Date.now() + 1,
+            type: 'income',
+            amount: 2500.00,
+            category: 'Salaire',
+            description: 'Salaire mensuel',
+            date: new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0],
+            bankAccount: account.id,
+            selected: true
+        },
+        {
+            id: Date.now() + 2,
+            type: 'expense',
+            amount: 45.50,
+            category: 'Courses',
+            description: 'Supermarché Carrefour',
+            date: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2).toISOString().split('T')[0],
+            bankAccount: account.id,
+            selected: true
+        },
+        {
+            id: Date.now() + 3,
+            type: 'expense',
+            amount: 12.80,
+            category: 'Transport',
+            description: 'Ticket de métro',
+            date: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1).toISOString().split('T')[0],
+            bankAccount: account.id,
+            selected: true
+        },
+        {
+            id: Date.now() + 4,
+            type: 'expense',
+            amount: 850.00,
+            category: 'Appartement',
+            description: 'Loyer mensuel',
+            date: new Date(today.getFullYear(), today.getMonth(), 5).toISOString().split('T')[0],
+            bankAccount: account.id,
+            selected: true
+        },
+        {
+            id: Date.now() + 5,
+            type: 'expense',
+            amount: 23.90,
+            category: 'Restaurant',
+            description: 'Déjeuner restaurant',
+            date: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 3).toISOString().split('T')[0],
+            bankAccount: account.id,
+            selected: true
+        }
+    ];
+    
+    return sampleTransactions;
+}
+
+function displayImportModal() {
+    if (pendingImports.length === 0) {
+        showNotification('⚠️ Aucune nouvelle transaction à importer', 'warning');
+        return;
+    }
+    
+    importTransactionsList.innerHTML = `
+        <div style="margin-bottom: 15px; padding: 10px; background: rgba(102, 126, 234, 0.1); border-radius: 8px;">
+            <strong>${pendingImports.length} transaction(s) trouvée(s)</strong>
+        </div>
+    ` + pendingImports.map((transaction, index) => `
+        <div class="import-transaction-item ${transaction.type}">
+            <input type="checkbox" id="import_${index}" ${transaction.selected ? 'checked' : ''} 
+                   onchange="toggleImportSelection(${index})"
+                   style="margin-right: 10px; cursor: pointer;">
+            <div class="transaction-info" style="flex: 1;">
+                <h4>${transaction.category}</h4>
+                <p>${transaction.description}</p>
+                <p style="font-size: 0.85em; color: #999;">${formatDate(transaction.date)}</p>
+            </div>
+            <div class="transaction-amount">
+                ${transaction.type === 'income' ? '+' : '-'}${formatCurrency(transaction.amount)}
+            </div>
+        </div>
+    `).join('');
+    
+    importModal.style.display = 'block';
+}
+
+function toggleImportSelection(index) {
+    pendingImports[index].selected = !pendingImports[index].selected;
+}
+
+confirmImportBtn.addEventListener('click', () => {
+    const selectedTransactions = pendingImports.filter(t => t.selected);
+    
+    if (selectedTransactions.length === 0) {
+        showNotification('⚠️ Aucune transaction sélectionnée', 'warning');
+        return;
+    }
+    
+    // Add selected transactions to the main transactions array
+    selectedTransactions.forEach(transaction => {
+        const newTransaction = {
+            id: transaction.id,
+            type: transaction.type,
+            amount: transaction.amount,
+            category: transaction.category,
+            description: transaction.description,
+            date: transaction.date,
+            imported: true,
+            bankAccount: transaction.bankAccount
+        };
+        transactions.push(newTransaction);
+    });
+    
+    saveTransactions();
+    updateUI();
+    importModal.style.display = 'none';
+    pendingImports = [];
+    
+    showNotification(`✅ ${selectedTransactions.length} transaction(s) importée(s) avec succès !`, 'success');
+});
+
+cancelImportBtn.addEventListener('click', () => {
+    importModal.style.display = 'none';
+    pendingImports = [];
+});
+
+closeImportModal.addEventListener('click', () => {
+    importModal.style.display = 'none';
+    pendingImports = [];
+});
+
+// Close import modal when clicking outside
+window.addEventListener('click', (event) => {
+    if (event.target === importModal) {
+        importModal.style.display = 'none';
+        pendingImports = [];
+    }
+});
 
 // Update header to show current profile info
 function updateHeaderProfileInfo() {
@@ -813,3 +1041,4 @@ function displayArchives() {
 // Initialiser
 updateUI();
 updateMonthInfo();
+displayLinkedAccounts();
