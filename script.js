@@ -1002,6 +1002,7 @@ function showChartDetails() {
     
     const categories = Object.keys(expensesByCategory).sort((a, b) => expensesByCategory[b] - expensesByCategory[a]);
     const totalExpenses = Object.values(expensesByCategory).reduce((a, b) => a + b, 0);
+    const expenseTransactionCount = transactions.filter(t => t.type === 'expense').length;
     
     if (categories.length === 0) {
         showNotification('ℹ️ Aucune dépense à analyser', 'info');
@@ -1012,6 +1013,8 @@ function showChartDetails() {
         '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
         '#E74C3C', '#3498DB', '#2ECC71', '#F39C12', '#8E44AD', '#1ABC9C'
     ];
+    
+    const avgExpensePerTransaction = expenseTransactionCount > 0 ? totalExpenses / expenseTransactionCount : 0;
     
     let detailsHTML = `
         <div class="chart-details-summary">
@@ -1025,7 +1028,7 @@ function showChartDetails() {
             </div>
             <div class="detail-stat-card">
                 <div class="detail-stat-label">Dépense Moyenne</div>
-                <div class="detail-stat-value">${formatCurrency(totalExpenses / transactions.filter(t => t.type === 'expense').length)}</div>
+                <div class="detail-stat-value">${formatCurrency(avgExpensePerTransaction)}</div>
             </div>
         </div>
         
@@ -1115,7 +1118,7 @@ function showChartDetails() {
             <div class="insight-card">
                 <div class="insight-icon">📈</div>
                 <div>
-                    <strong>Dépense moyenne par transaction:</strong> ${formatCurrency(totalExpenses / transactions.filter(t => t.type === 'expense').length)}
+                    <strong>Dépense moyenne par transaction:</strong> ${formatCurrency(avgExpensePerTransaction)}
                 </div>
             </div>
         </div>
@@ -1128,17 +1131,4 @@ function showChartDetails() {
 // Close chart details modal
 closeChartDetailsModal.addEventListener('click', () => {
     chartDetailsModal.style.display = 'none';
-});
-
-// Close modals when clicking outside
-window.addEventListener('click', (event) => {
-    if (event.target === archivesModal) {
-        archivesModal.style.display = 'none';
-    }
-    if (event.target === customFieldsModal) {
-        customFieldsModal.style.display = 'none';
-    }
-    if (event.target === chartDetailsModal) {
-        chartDetailsModal.style.display = 'none';
-    }
 });
