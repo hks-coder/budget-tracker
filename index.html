@@ -59,6 +59,41 @@
             </div>
         </section>
 
+        <!-- Bank Account Management -->
+        <section class="bank-accounts-section">
+            <h2>🏦 Gestion des Comptes Bancaires</h2>
+            <div class="bank-account-container">
+                <div class="form-container">
+                    <h3>➕ Lier un Compte Bancaire</h3>
+                    <form id="bankAccountForm">
+                        <div class="form-group">
+                            <label for="bankName">Nom de la Banque</label>
+                            <input type="text" id="bankName" required placeholder="Ex: BNP Paribas, Crédit Agricole">
+                        </div>
+                        <div class="form-group">
+                            <label for="accountNumber">Numéro de Compte (4 derniers chiffres)</label>
+                            <input type="text" id="accountNumber" required placeholder="Ex: 1234" maxlength="4" pattern="[0-9]{4}">
+                        </div>
+                        <div class="form-group">
+                            <label for="accountType">Type de Compte</label>
+                            <select id="accountType" required>
+                                <option value="">Sélectionnez un type</option>
+                                <option value="Compte Courant">Compte Courant</option>
+                                <option value="Compte Épargne">Compte Épargne</option>
+                                <option value="Compte Joint">Compte Joint</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-bank">Lier le Compte</button>
+                    </form>
+                </div>
+                
+                <div class="linked-accounts" id="linkedAccountsSection">
+                    <h3>💳 Comptes Liés</h3>
+                    <div id="linkedAccountsList"></div>
+                </div>
+            </div>
+        </section>
+
         <!-- Formulaires -->
         <section class="forms-section">
             <div class="form-container">
@@ -200,6 +235,26 @@
                 <span class="close-modal" id="closeModal">&times;</span>
                 <h2>📚 Archives Mensuelles</h2>
                 <div id="archivesList"></div>
+            </div>
+        </div>
+
+        <!-- Import Transactions Modal -->
+        <div id="importModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close-modal" id="closeImportModal">&times;</span>
+                <h2>📥 Importer des Transactions</h2>
+                <p style="color: #7f8c8d; margin-bottom: 20px;">
+                    Sélectionnez les transactions à importer depuis votre compte bancaire.
+                </p>
+                <div id="importTransactionsList"></div>
+                <div style="margin-top: 20px; text-align: center;">
+                    <button id="confirmImport" class="btn btn-bank" style="width: auto; padding: 12px 30px;">
+                        ✅ Confirmer l'Importation
+                    </button>
+                    <button id="cancelImport" class="btn btn-clear" style="width: auto; padding: 12px 30px; margin-left: 10px;">
+                        ❌ Annuler
+                    </button>
+                </div>
             </div>
         </div>
 

@@ -26,8 +26,8 @@ let profileLocked = localStorage.getItem('profileLocked') === 'true';
 // Données
 let transactions = JSON.parse(localStorage.getItem(`transactions_${currentProfile}`)) || [];
 let archivedMonths = JSON.parse(localStorage.getItem(`archived_${currentProfile}`)) || [];
-let customFields = JSON.parse(localStorage.getItem(`customFields_${currentProfile}`)) || [];
-let customFieldsData = JSON.parse(localStorage.getItem(`customFieldsData_${currentProfile}`)) || {};
+let bankAccounts = JSON.parse(localStorage.getItem(`bankAccounts_${currentProfile}`)) || [];
+let pendingImports = [];
 
 // Éléments du DOM
 const profileSelect = document.getElementById('profileSelect');
@@ -44,6 +44,15 @@ const clearAllBtn = document.getElementById('clearAll');
 const expenseCategory = document.getElementById('expenseCategory');
 const customCategoryGroup = document.getElementById('customCategoryGroup');
 const customCategory = document.getElementById('customCategory');
+
+// Bank Account Elements
+const bankAccountForm = document.getElementById('bankAccountForm');
+const linkedAccountsList = document.getElementById('linkedAccountsList');
+const importModal = document.getElementById('importModal');
+const closeImportModal = document.getElementById('closeImportModal');
+const importTransactionsList = document.getElementById('importTransactionsList');
+const confirmImportBtn = document.getElementById('confirmImport');
+const cancelImportBtn = document.getElementById('cancelImport');
 
 // Initialiser la date d'aujourd'hui
 document.getElementById('incomeDate').valueAsDate = new Date();
@@ -194,14 +203,229 @@ function switchProfile(newProfile) {
     // Load new profile's transactions and archives
     transactions = JSON.parse(localStorage.getItem(`transactions_${currentProfile}`)) || [];
     archivedMonths = JSON.parse(localStorage.getItem(`archived_${currentProfile}`)) || [];
-    customFields = JSON.parse(localStorage.getItem(`customFields_${currentProfile}`)) || [];
-    customFieldsData = JSON.parse(localStorage.getItem(`customFieldsData_${currentProfile}`)) || {};
+    bankAccounts = JSON.parse(localStorage.getItem(`bankAccounts_${currentProfile}`)) || [];
     
     // Update UI
     updateUI();
     updateHeaderProfileInfo();
-    updateCustomFieldsDisplay();
+    displayLinkedAccounts();
 }
+
+// Bank Account Management Functions
+bankAccountForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    
+    const bankAccount = {
+        id: Date.now(),
+        bankName: document.getElementById('bankName').value,
+        accountNumber: document.getElementById('accountNumber').value,
+        accountType: document.getElementById('accountType').value,
+        linkedDate: new Date().toISOString()
+    };
+    
+    bankAccounts.push(bankAccount);
+    saveBankAccounts();
+    bankAccountForm.reset();
+    displayLinkedAccounts();
+    
+    showNotification('✅ Compte bancaire lié avec succès !', 'success');
+});
+
+function saveBankAccounts() {
+    localStorage.setItem(`bankAccounts_${currentProfile}`, JSON.stringify(bankAccounts));
+}
+
+function displayLinkedAccounts() {
+    if (bankAccounts.length === 0) {
+        linkedAccountsList.innerHTML = `
+            <div class="empty-state" style="padding: 20px;">
+                <p style="font-size: 1em;">📭 Aucun compte bancaire lié</p>
+            </div>
+        `;
+        return;
+    }
+    
+    linkedAccountsList.innerHTML = bankAccounts.map(account => `
+        <div class="bank-account-item">
+            <div class="bank-account-info">
+                <h4>🏦 ${account.bankName}</h4>
+                <p>Type: ${account.accountType}</p>
+                <p>Compte: ****${account.accountNumber}</p>
+                <p style="font-size: 0.85em; color: #999;">Lié le ${formatDate(account.linkedDate.split('T')[0])}</p>
+            </div>
+            <div class="bank-account-actions">
+                <button class="btn-import" onclick="importTransactions(${account.id})">
+                    📥 Importer
+                </button>
+                <button class="delete-btn" onclick="deleteBankAccount(${account.id})">
+                    🗑️
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function deleteBankAccount(id) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce compte bancaire ?')) {
+        bankAccounts = bankAccounts.filter(acc => acc.id !== id);
+        saveBankAccounts();
+        displayLinkedAccounts();
+        showNotification('Compte bancaire supprimé', 'info');
+    }
+}
+
+function importTransactions(accountId) {
+    const account = bankAccounts.find(acc => acc.id === accountId);
+    if (!account) return;
+    
+    // Simulate importing transactions from bank
+    // In a real application, this would call a bank API
+    pendingImports = generateSampleTransactions(account);
+    
+    displayImportModal();
+}
+
+function generateSampleTransactions(account) {
+    // Generate sample transactions to simulate bank import
+    const today = new Date();
+    const baseTimestamp = Date.now();
+    const sampleTransactions = [
+        {
+            id: baseTimestamp * 1000 + 1,
+            type: 'income',
+            amount: 2500.00,
+            category: 'Salaire',
+            description: 'Salaire mensuel',
+            date: new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0],
+            bankAccount: account.id,
+            selected: true
+        },
+        {
+            id: baseTimestamp * 1000 + 2,
+            type: 'expense',
+            amount: 45.50,
+            category: 'Courses',
+            description: 'Supermarché Carrefour',
+            date: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 2).toISOString().split('T')[0],
+            bankAccount: account.id,
+            selected: true
+        },
+        {
+            id: baseTimestamp * 1000 + 3,
+            type: 'expense',
+            amount: 12.80,
+            category: 'Transport',
+            description: 'Ticket de métro',
+            date: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1).toISOString().split('T')[0],
+            bankAccount: account.id,
+            selected: true
+        },
+        {
+            id: baseTimestamp * 1000 + 4,
+            type: 'expense',
+            amount: 850.00,
+            category: 'Appartement',
+            description: 'Loyer mensuel',
+            date: new Date(today.getFullYear(), today.getMonth(), 5).toISOString().split('T')[0],
+            bankAccount: account.id,
+            selected: true
+        },
+        {
+            id: baseTimestamp * 1000 + 5,
+            type: 'expense',
+            amount: 23.90,
+            category: 'Restaurant',
+            description: 'Déjeuner restaurant',
+            date: new Date(today.getFullYear(), today.getMonth(), today.getDate() - 3).toISOString().split('T')[0],
+            bankAccount: account.id,
+            selected: true
+        }
+    ];
+    
+    return sampleTransactions;
+}
+
+function displayImportModal() {
+    if (pendingImports.length === 0) {
+        showNotification('⚠️ Aucune nouvelle transaction à importer', 'warning');
+        return;
+    }
+    
+    importTransactionsList.innerHTML = `
+        <div style="margin-bottom: 15px; padding: 10px; background: rgba(102, 126, 234, 0.1); border-radius: 8px;">
+            <strong>${pendingImports.length} transaction(s) trouvée(s)</strong>
+        </div>
+    ` + pendingImports.map((transaction, index) => `
+        <div class="import-transaction-item ${transaction.type}">
+            <input type="checkbox" id="import_${index}" ${transaction.selected ? 'checked' : ''} 
+                   onchange="toggleImportSelection(${index})"
+                   style="margin-right: 10px; cursor: pointer;">
+            <div class="transaction-info" style="flex: 1;">
+                <h4>${transaction.category}</h4>
+                <p>${transaction.description}</p>
+                <p style="font-size: 0.85em; color: #999;">${formatDate(transaction.date)}</p>
+            </div>
+            <div class="transaction-amount">
+                ${transaction.type === 'income' ? '+' : '-'}${formatCurrency(transaction.amount)}
+            </div>
+        </div>
+    `).join('');
+    
+    importModal.style.display = 'block';
+}
+
+function toggleImportSelection(index) {
+    pendingImports[index].selected = !pendingImports[index].selected;
+}
+
+confirmImportBtn.addEventListener('click', () => {
+    const selectedTransactions = pendingImports.filter(t => t.selected);
+    
+    if (selectedTransactions.length === 0) {
+        showNotification('⚠️ Aucune transaction sélectionnée', 'warning');
+        return;
+    }
+    
+    // Add selected transactions to the main transactions array
+    selectedTransactions.forEach(transaction => {
+        const newTransaction = {
+            id: transaction.id,
+            type: transaction.type,
+            amount: transaction.amount,
+            category: transaction.category,
+            description: transaction.description,
+            date: transaction.date,
+            imported: true,
+            bankAccount: transaction.bankAccount
+        };
+        transactions.push(newTransaction);
+    });
+    
+    saveTransactions();
+    updateUI();
+    importModal.style.display = 'none';
+    pendingImports = [];
+    
+    showNotification(`✅ ${selectedTransactions.length} transaction(s) importée(s) avec succès !`, 'success');
+});
+
+cancelImportBtn.addEventListener('click', () => {
+    importModal.style.display = 'none';
+    pendingImports = [];
+});
+
+closeImportModal.addEventListener('click', () => {
+    importModal.style.display = 'none';
+    pendingImports = [];
+});
+
+// Close import modal when clicking outside
+window.addEventListener('click', (event) => {
+    if (event.target === importModal) {
+        importModal.style.display = 'none';
+        pendingImports = [];
+    }
+});
 
 // Update header to show current profile info
 function updateHeaderProfileInfo() {
@@ -846,289 +1070,4 @@ function displayArchives() {
 // Initialiser
 updateUI();
 updateMonthInfo();
-
-// ============================================
-// CUSTOM FIELDS FUNCTIONALITY
-// ============================================
-
-// Open custom fields modal
-customizeFieldsBtn.addEventListener('click', () => {
-    displayCustomFieldsModal();
-    customFieldsModal.style.display = 'block';
-});
-
-// Close custom fields modal
-closeCustomFieldsModal.addEventListener('click', () => {
-    customFieldsModal.style.display = 'none';
-});
-
-// Add custom field
-addCustomFieldBtn.addEventListener('click', () => {
-    const name = document.getElementById('newFieldName').value.trim();
-    const type = document.getElementById('newFieldType').value;
-    
-    if (!name) {
-        showNotification('⚠️ Veuillez entrer un nom de champ', 'warning');
-        return;
-    }
-    
-    const field = {
-        id: Date.now(),
-        name: name,
-        type: type
-    };
-    
-    customFields.push(field);
-    localStorage.setItem(`customFields_${currentProfile}`, JSON.stringify(customFields));
-    
-    // Initialize data for this field if it doesn't exist
-    if (!customFieldsData[field.id]) {
-        customFieldsData[field.id] = '';
-        localStorage.setItem(`customFieldsData_${currentProfile}`, JSON.stringify(customFieldsData));
-    }
-    
-    document.getElementById('newFieldName').value = '';
-    document.getElementById('newFieldType').value = 'text';
-    
-    displayCustomFieldsModal();
-    updateCustomFieldsDisplay();
-    showNotification('✅ Champ personnalisé ajouté', 'success');
-});
-
-// Display custom fields in modal
-function displayCustomFieldsModal() {
-    const customFieldsList = document.getElementById('customFieldsList');
-    
-    if (customFields.length === 0) {
-        customFieldsList.innerHTML = `
-            <div class="empty-state" style="padding: 20px;">
-                <p>Aucun champ personnalisé. Ajoutez-en un ci-dessous !</p>
-            </div>
-        `;
-        return;
-    }
-    
-    customFieldsList.innerHTML = `
-        <div class="existing-fields">
-            <h3>📋 Champs personnalisés existants</h3>
-            ${customFields.map(field => `
-                <div class="custom-field-item">
-                    <div>
-                        <strong>${field.name}</strong>
-                        <span style="color: #7f8c8d; font-size: 0.9em; margin-left: 10px;">
-                            (${field.type === 'currency' ? 'Montant' : field.type === 'number' ? 'Nombre' : field.type === 'textarea' ? 'Texte long' : 'Texte'})
-                        </span>
-                    </div>
-                    <button class="btn-delete-field" onclick="deleteCustomField(${field.id})">🗑️</button>
-                </div>
-            `).join('')}
-        </div>
-    `;
-}
-
-// Delete custom field
-function deleteCustomField(fieldId) {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce champ personnalisé ?')) {
-        customFields = customFields.filter(f => f.id !== fieldId);
-        delete customFieldsData[fieldId];
-        
-        localStorage.setItem(`customFields_${currentProfile}`, JSON.stringify(customFields));
-        localStorage.setItem(`customFieldsData_${currentProfile}`, JSON.stringify(customFieldsData));
-        
-        displayCustomFieldsModal();
-        updateCustomFieldsDisplay();
-        showNotification('Champ personnalisé supprimé', 'info');
-    }
-}
-
-// Update custom fields display in main page
-function updateCustomFieldsDisplay() {
-    if (customFields.length === 0) {
-        customFieldsDisplay.innerHTML = '';
-        return;
-    }
-    
-    let html = '<div class="custom-fields-container"><h3>📝 Informations Personnalisées</h3>';
-    
-    customFields.forEach(field => {
-        const value = customFieldsData[field.id] || '';
-        html += `
-            <div class="custom-field-input-group">
-                <label>${field.name}</label>
-                ${field.type === 'textarea' 
-                    ? `<textarea id="customField_${field.id}" onchange="saveCustomFieldData(${field.id}, this.value)">${value}</textarea>`
-                    : `<input type="${field.type === 'currency' || field.type === 'number' ? 'number' : 'text'}" 
-                             id="customField_${field.id}" 
-                             value="${value}"
-                             ${field.type === 'currency' ? 'step="0.01"' : ''}
-                             onchange="saveCustomFieldData(${field.id}, this.value)"
-                             placeholder="${field.type === 'currency' ? '0.00 €' : ''}">`
-                }
-            </div>
-        `;
-    });
-    
-    html += '</div>';
-    customFieldsDisplay.innerHTML = html;
-}
-
-// Save custom field data
-function saveCustomFieldData(fieldId, value) {
-    customFieldsData[fieldId] = value;
-    localStorage.setItem(`customFieldsData_${currentProfile}`, JSON.stringify(customFieldsData));
-    showNotification('💾 Données sauvegardées', 'success');
-}
-
-// ============================================
-// CHART DETAILS FUNCTIONALITY
-// ============================================
-
-// Show chart details modal
-function showChartDetails() {
-    const expensesByCategory = {};
-    const transactionsByCategory = {};
-    
-    transactions
-        .filter(t => t.type === 'expense')
-        .forEach(t => {
-            if (expensesByCategory[t.category]) {
-                expensesByCategory[t.category] += t.amount;
-                transactionsByCategory[t.category].push(t);
-            } else {
-                expensesByCategory[t.category] = t.amount;
-                transactionsByCategory[t.category] = [t];
-            }
-        });
-    
-    const categories = Object.keys(expensesByCategory).sort((a, b) => expensesByCategory[b] - expensesByCategory[a]);
-    const totalExpenses = Object.values(expensesByCategory).reduce((a, b) => a + b, 0);
-    const expenseTransactionCount = transactions.filter(t => t.type === 'expense').length;
-    
-    if (categories.length === 0) {
-        showNotification('ℹ️ Aucune dépense à analyser', 'info');
-        return;
-    }
-    
-    const colors = [
-        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
-        '#E74C3C', '#3498DB', '#2ECC71', '#F39C12', '#8E44AD', '#1ABC9C'
-    ];
-    
-    const avgExpensePerTransaction = expenseTransactionCount > 0 ? totalExpenses / expenseTransactionCount : 0;
-    
-    let detailsHTML = `
-        <div class="chart-details-summary">
-            <div class="detail-stat-card">
-                <div class="detail-stat-label">Total des Dépenses</div>
-                <div class="detail-stat-value">${formatCurrency(totalExpenses)}</div>
-            </div>
-            <div class="detail-stat-card">
-                <div class="detail-stat-label">Nombre de Catégories</div>
-                <div class="detail-stat-value">${categories.length}</div>
-            </div>
-            <div class="detail-stat-card">
-                <div class="detail-stat-label">Dépense Moyenne</div>
-                <div class="detail-stat-value">${formatCurrency(avgExpensePerTransaction)}</div>
-            </div>
-        </div>
-        
-        <h3 style="margin: 30px 0 20px 0; color: #2c3e50;">📊 Répartition par Catégorie</h3>
-    `;
-    
-    categories.forEach((category, index) => {
-        const amount = expensesByCategory[category];
-        const percentage = ((amount / totalExpenses) * 100).toFixed(1);
-        const categoryTransactions = transactionsByCategory[category];
-        const color = colors[index % colors.length];
-        const avgAmount = amount / categoryTransactions.length;
-        
-        detailsHTML += `
-            <div class="category-detail-card" style="border-left: 5px solid ${color};">
-                <div class="category-detail-header">
-                    <div>
-                        <h4 style="color: #2c3e50; margin-bottom: 5px;">${category}</h4>
-                        <div style="display: flex; gap: 20px; margin-top: 10px;">
-                            <div>
-                                <span style="color: #7f8c8d; font-size: 0.9em;">Total:</span>
-                                <strong style="color: ${color}; font-size: 1.2em; margin-left: 5px;">${formatCurrency(amount)}</strong>
-                            </div>
-                            <div>
-                                <span style="color: #7f8c8d; font-size: 0.9em;">% du total:</span>
-                                <strong style="margin-left: 5px;">${percentage}%</strong>
-                            </div>
-                            <div>
-                                <span style="color: #7f8c8d; font-size: 0.9em;">Transactions:</span>
-                                <strong style="margin-left: 5px;">${categoryTransactions.length}</strong>
-                            </div>
-                            <div>
-                                <span style="color: #7f8c8d; font-size: 0.9em;">Moyenne:</span>
-                                <strong style="margin-left: 5px;">${formatCurrency(avgAmount)}</strong>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="category-transactions-list">
-                    <div class="progress-bar-container">
-                        <div class="progress-bar" style="width: ${percentage}%; background: ${color};"></div>
-                    </div>
-                    <details>
-                        <summary style="cursor: pointer; padding: 10px; background: #f8f9fa; border-radius: 6px; margin-top: 10px;">
-                            🔍 Voir les ${categoryTransactions.length} transaction${categoryTransactions.length > 1 ? 's' : ''}
-                        </summary>
-                        <div style="margin-top: 10px;">
-                            ${categoryTransactions.sort((a, b) => new Date(b.date) - new Date(a.date)).map(t => `
-                                <div class="detail-transaction-item">
-                                    <div>
-                                        <div style="font-weight: 600; color: #2c3e50;">${t.description}</div>
-                                        <div style="font-size: 0.85em; color: #7f8c8d;">${formatDate(t.date)}</div>
-                                    </div>
-                                    <div style="font-weight: bold; color: ${color};">${formatCurrency(t.amount)}</div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </details>
-                </div>
-            </div>
-        `;
-    });
-    
-    // Add insights section
-    const topCategory = categories[0];
-    const topAmount = expensesByCategory[topCategory];
-    const topPercentage = ((topAmount / totalExpenses) * 100).toFixed(1);
-    
-    detailsHTML += `
-        <div class="insights-section">
-            <h3 style="color: #2c3e50; margin-bottom: 15px;">💡 Insights & Recommandations</h3>
-            <div class="insight-card">
-                <div class="insight-icon">📌</div>
-                <div>
-                    <strong>Catégorie principale:</strong> ${topCategory} représente ${topPercentage}% de vos dépenses totales (${formatCurrency(topAmount)})
-                </div>
-            </div>
-            ${topPercentage > 40 ? `
-                <div class="insight-card warning">
-                    <div class="insight-icon">⚠️</div>
-                    <div>
-                        <strong>Attention:</strong> Une seule catégorie représente plus de 40% de vos dépenses. Envisagez de diversifier ou de réduire ces dépenses.
-                    </div>
-                </div>
-            ` : ''}
-            <div class="insight-card">
-                <div class="insight-icon">📈</div>
-                <div>
-                    <strong>Dépense moyenne par transaction:</strong> ${formatCurrency(avgExpensePerTransaction)}
-                </div>
-            </div>
-        </div>
-    `;
-    
-    document.getElementById('chartDetailsContent').innerHTML = detailsHTML;
-    chartDetailsModal.style.display = 'block';
-}
-
-// Close chart details modal
-closeChartDetailsModal.addEventListener('click', () => {
-    chartDetailsModal.style.display = 'none';
-});
+displayLinkedAccounts();
