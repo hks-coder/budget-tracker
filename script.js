@@ -39,10 +39,25 @@ const totalExpense = document.getElementById('totalExpense');
 const filterType = document.getElementById('filterType');
 const filterCategory = document.getElementById('filterCategory');
 const clearAllBtn = document.getElementById('clearAll');
+const expenseCategory = document.getElementById('expenseCategory');
+const customCategoryGroup = document.getElementById('customCategoryGroup');
+const customCategory = document.getElementById('customCategory');
 
 // Initialiser la date d'aujourd'hui
 document.getElementById('incomeDate').valueAsDate = new Date();
 document.getElementById('expenseDate').valueAsDate = new Date();
+
+// Handle custom category selection
+expenseCategory.addEventListener('change', (e) => {
+    if (e.target.value === 'custom') {
+        customCategoryGroup.style.display = 'block';
+        customCategory.required = true;
+    } else {
+        customCategoryGroup.style.display = 'none';
+        customCategory.required = false;
+        customCategory.value = '';
+    }
+});
 
 // Show PIN modal on page load if not authenticated
 if (!isAuthenticated || authenticatedProfile !== currentProfile) {
@@ -215,11 +230,22 @@ incomeForm.addEventListener('submit', (e) => {
 expenseForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
+    let categoryValue = document.getElementById('expenseCategory').value;
+    
+    // If custom category is selected, use the custom input value
+    if (categoryValue === 'custom') {
+        categoryValue = document.getElementById('customCategory').value.trim();
+        if (!categoryValue) {
+            showNotification('⚠️ Veuillez entrer un nom de catégorie', 'warning');
+            return;
+        }
+    }
+    
     const transaction = {
         id: Date.now(),
         type: 'expense',
         amount: parseFloat(document.getElementById('expenseAmount').value),
-        category: document.getElementById('expenseCategory').value,
+        category: categoryValue,
         description: document.getElementById('expenseDescription').value,
         date: document.getElementById('expenseDate').value
     };
@@ -228,6 +254,8 @@ expenseForm.addEventListener('submit', (e) => {
     saveTransactions();
     expenseForm.reset();
     document.getElementById('expenseDate').valueAsDate = new Date();
+    customCategoryGroup.style.display = 'none';
+    customCategory.required = false;
     updateUI();
     
     showNotification('Dépense ajoutée avec succès !', 'success');
@@ -380,7 +408,7 @@ function updateExpenseChart() {
     // Si aucune dépense, afficher un message
     if (categories.length === 0) {
         chartSection.innerHTML = `
-            <h2>📈 Dépenses par Catégorie</h2>
+            <h2>📊 Dépenses par Catégorie</h2>
             <div style="text-align: center; padding: 40px; color: #7f8c8d;">
                 <p style="font-size: 1.2em;">Aucune dépense pour le moment</p>
             </div>
@@ -388,7 +416,7 @@ function updateExpenseChart() {
         return;
     }
     
-    // Couleurs pour les barres
+    // Couleurs pour le graphique en camembert
     const colors = [
         '#FF6384',
         '#36A2EB',
@@ -398,29 +426,128 @@ function updateExpenseChart() {
         '#FF9F40',
         '#E74C3C',
         '#3498DB',
-        '#2ECC71'
+        '#2ECC71',
+        '#F39C12',
+        '#8E44AD',
+        '#1ABC9C'
     ];
     
-    // Créer le graphique en barres HTML/CSS
-    let chartHTML = '<h2>📈 Dépenses par Catégorie</h2><div style="padding: 20px;">';
+    // Créer le graphique en camembert (pie chart) avec CSS
+    let chartHTML = '<h2>📊 Dépenses par Catégorie</h2>';
+    chartHTML += '<div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 40px; padding: 20px;">';
     
-    categories.forEach((category, index) => {
+    // Créer le cercle du graphique
+    chartHTML += '<div style="position: relative; width: 300px; height: 300px;">';
+    
+    // Créer les segments du pie chart avec du CSS
+    let currentAngle = 0;
+    const pieSegments = categories.map((category, index) => {
         const amount = expensesByCategory[category];
-        const percentage = ((amount / totalExpenses) * 100).toFixed(1);
+        const percentage = (amount / totalExpenses) * 100;
+        const angle = (percentage / 100) * 360;
         const color = colors[index % colors.length];
         
+        // Calculer les coordonnées pour créer un segment
+        const startAngle = currentAngle;
+        const endAngle = currentAngle + angle;
+        currentAngle = endAngle;
+        
+        return {
+            category,
+            amount,
+            percentage: percentage.toFixed(1),
+            color,
+            startAngle,
+            endAngle
+        };
+    });
+    
+    // Créer le graphique en utilisant des divs avec border-radius et clip-path
+    pieSegments.forEach((segment, index) => {
+        const rotation = segment.startAngle;
+        const segmentAngle = segment.endAngle - segment.startAngle;
+        
+        // Pour des angles <= 180 degrés
+        if (segmentAngle <= 180) {
+            chartHTML += `
+                <div style="
+                    position: absolute;
+                    width: 150px;
+                    height: 150px;
+                    top: 0;
+                    left: 150px;
+                    transform-origin: 0% 100%;
+                    transform: rotate(${rotation}deg) skewY(${90 - segmentAngle}deg);
+                    background: ${segment.color};
+                    border-radius: 0 100% 0 0;
+                "></div>
+            `;
+        } else {
+            // Pour des angles > 180 degrés, diviser en deux segments
+            chartHTML += `
+                <div style="
+                    position: absolute;
+                    width: 150px;
+                    height: 150px;
+                    top: 0;
+                    left: 150px;
+                    transform-origin: 0% 100%;
+                    transform: rotate(${rotation}deg);
+                    background: ${segment.color};
+                    border-radius: 0 100% 0 0;
+                "></div>
+                <div style="
+                    position: absolute;
+                    width: 150px;
+                    height: 150px;
+                    top: 0;
+                    left: 150px;
+                    transform-origin: 0% 100%;
+                    transform: rotate(${rotation + 180}deg) skewY(${270 - segmentAngle}deg);
+                    background: ${segment.color};
+                    border-radius: 0 100% 0 0;
+                "></div>
+            `;
+        }
+    });
+    
+    // Ajouter un cercle blanc au centre pour faire un donut chart
+    chartHTML += `
+        <div style="
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            top: 90px;
+            left: 90px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        ">
+            <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 5px;">Total</div>
+            <div style="font-size: 1.3em; font-weight: bold; color: #2c3e50;">${formatCurrency(totalExpenses)}</div>
+        </div>
+    `;
+    
+    chartHTML += '</div>';
+    
+    // Ajouter la légende
+    chartHTML += '<div style="flex: 1; min-width: 200px;">';
+    pieSegments.forEach(segment => {
         chartHTML += `
-            <div style="margin-bottom: 20px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                    <span style="font-weight: 600; color: #2c3e50;">${category}</span>
-                    <span style="color: #7f8c8d;">${formatCurrency(amount)} (${percentage}%)</span>
-                </div>
-                <div style="background: #e0e0e0; border-radius: 10px; height: 25px; overflow: hidden;">
-                    <div style="background: ${color}; height: 100%; width: ${percentage}%; border-radius: 10px; transition: width 0.5s ease;"></div>
+            <div style="display: flex; align-items: center; margin-bottom: 12px; padding: 8px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                <div style="width: 20px; height: 20px; background: ${segment.color}; border-radius: 4px; margin-right: 12px; flex-shrink: 0;"></div>
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; color: #2c3e50; margin-bottom: 2px;">${segment.category}</div>
+                    <div style="font-size: 0.9em; color: #7f8c8d;">${formatCurrency(segment.amount)} (${segment.percentage}%)</div>
                 </div>
             </div>
         `;
     });
+    chartHTML += '</div>';
     
     chartHTML += '</div>';
     chartSection.innerHTML = chartHTML;
