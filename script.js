@@ -1677,23 +1677,116 @@ if (exportAllArchivesBtn) {
     exportAllArchivesBtn.addEventListener('click', exportAllArchivesToExcel);
 }
 
-// Initialiser l'application
-async function initializeApp() {
-    // Initialiser Firebase
-    initializeFirebase();
-    
-    // Charger les données depuis Firebase ou localStorage (en parallèle pour de meilleures performances)
-    await Promise.all([
-        loadTransactions(),
-        loadArchives(),
-        loadCustomFields()
-    ]);
-    
-    // Mettre à jour l'interface
-    updateUI();
-    updateMonthInfo();
-    displayCustomFieldsValues();
+// Export/Import Profile Data Functions
+function exportProfileData() {
+    try {
+        // Collect all data for the current profile
+        const profileData = {
+            profile: currentProfile,
+            exportDate: new Date().toISOString(),
+            transactions: transactions,
+            archivedMonths: archivedMonths,
+            customFields: customFields,
+            customFieldValues: customFieldValues
+        };
+        
+        // Convert to JSON string
+        const dataStr = JSON.stringify(profileData, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        
+        // Create download link
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `budget-tracker-${currentProfile}-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        showNotification('✅ Données exportées avec succès !', 'success');
+    } catch (error) {
+        console.error('Error exporting data:', error);
+        showNotification('❌ Erreur lors de l\'exportation des données', 'error');
+    }
 }
 
-// Démarrer l'application
-initializeApp();
+function importProfileData() {
+    try {
+        // Create file input element
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = '.json';
+        
+        fileInput.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            try {
+                const text = await file.text();
+                const importedData = JSON.parse(text);
+                
+                // Validate the imported data structure
+                if (!importedData.profile || 
+                    !Array.isArray(importedData.transactions) || 
+                    !Array.isArray(importedData.archivedMonths)) {
+                    throw new Error('Format de fichier invalide');
+                }
+                
+                // Confirm before importing
+                const confirmMsg = `Voulez-vous importer les données du profil "${importedData.profile}"?\n\n` +
+                    `Cela remplacera toutes les données actuelles du profil "${currentProfile}".\n` +
+                    `Date d'exportation: ${new Date(importedData.exportDate).toLocaleString('fr-FR')}`;
+                
+                if (!confirm(confirmMsg)) {
+                    return;
+                }
+                
+                // Import the data with proper defaults
+                transactions = importedData.transactions;
+                archivedMonths = importedData.archivedMonths;
+                customFields = Array.isArray(importedData.customFields) ? importedData.customFields : [];
+                customFieldValues = (importedData.customFieldValues && 
+                                    typeof importedData.customFieldValues === 'object' && 
+                                    !Array.isArray(importedData.customFieldValues)) ? 
+                                    importedData.customFieldValues : {};
+                
+                // Save to localStorage
+                saveTransactions();
+                saveArchive();
+                saveCustomFields();
+                
+                // Update UI
+                updateUI();
+                displayCustomFieldsValues();
+                
+                showNotification('✅ Données importées avec succès !', 'success');
+            } catch (error) {
+                console.error('Error importing data:', error);
+                showNotification('❌ Erreur lors de l\'importation: ' + error.message, 'error');
+            }
+        };
+        
+        fileInput.click();
+    } catch (error) {
+        console.error('Error in import function:', error);
+        showNotification('❌ Erreur lors de l\'importation des données', 'error');
+    }
+}
+
+// Add event listeners for export/import buttons
+const exportProfileBtn = document.getElementById('exportProfile');
+const importProfileBtn = document.getElementById('importProfile');
+
+if (exportProfileBtn) {
+    exportProfileBtn.addEventListener('click', exportProfileData);
+}
+
+if (importProfileBtn) {
+    importProfileBtn.addEventListener('click', importProfileData);
+}
+
+// Initialiser
+updateUI();
+updateMonthInfo();
+displayCustomFieldsValues();
