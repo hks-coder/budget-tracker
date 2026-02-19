@@ -241,6 +241,17 @@ header p {
     animation: pulse 2s infinite;
 }
 
+.sync-indicator {
+    display: inline-block;
+    margin-left: 15px;
+    padding: 5px 10px;
+    background: #ecf0f1;
+    border-radius: 5px;
+    font-size: 0.9em;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
 @keyframes pulse {
     0%, 100% {
         opacity: 1;
