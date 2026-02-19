@@ -1786,6 +1786,50 @@ if (importProfileBtn) {
     importProfileBtn.addEventListener('click', importProfileData);
 }
 
+// One-time migration: Update old "Assurance Vie" category to "Épargne - Assurance Vie"
+function migrateAssuranceVieCategory() {
+    const migrationKey = `migrated_assurance_vie_${currentProfile}`;
+    const alreadyMigrated = localStorage.getItem(migrationKey);
+    
+    if (alreadyMigrated) {
+        return; // Migration already done
+    }
+    
+    let needsSave = false;
+    
+    // Migrate transactions
+    transactions.forEach(transaction => {
+        if (transaction.category === 'Assurance Vie') {
+            transaction.category = 'Épargne - Assurance Vie';
+            needsSave = true;
+        }
+    });
+    
+    // Migrate archived transactions
+    archivedMonths.forEach(archive => {
+        if (archive.transactions) {
+            archive.transactions.forEach(transaction => {
+                if (transaction.category === 'Assurance Vie') {
+                    transaction.category = 'Épargne - Assurance Vie';
+                    needsSave = true;
+                }
+            });
+        }
+    });
+    
+    if (needsSave) {
+        saveData();
+        saveArchive();
+        console.log('✅ Migration completed: Updated "Assurance Vie" to "Épargne - Assurance Vie"');
+    }
+    
+    // Mark migration as complete
+    localStorage.setItem(migrationKey, 'true');
+}
+
+// Run migration before initializing UI
+migrateAssuranceVieCategory();
+
 // Initialiser
 updateUI();
 updateMonthInfo();
