@@ -29,7 +29,7 @@ function setButtonLoading(button, isLoading) {
     if (isLoading) {
         button.disabled = true;
         button.dataset.originalText = button.textContent;
-        button.innerHTML = '<span style="display: inline-block; animation: spin 1s linear infinite;">⏳</span> Traitement...';
+        button.innerHTML = '<span class="btn-spinner">⏳</span> Traitement...';
     } else {
         button.disabled = false;
         button.textContent = button.dataset.originalText || button.textContent;
@@ -335,12 +335,8 @@ incomeForm.addEventListener('submit', async (e) => {
         await saveTransactions();
         incomeForm.reset();
         document.getElementById('incomeDate').valueAsDate = new Date();
-        
-        // Use requestAnimationFrame for smoother UI updates
-        requestAnimationFrame(() => {
-            updateUI();
-            showNotification('✅ Revenu ajouté avec succès !', 'success');
-        });
+        updateUI();
+        showNotification('✅ Revenu ajouté avec succès !', 'success');
     } finally {
         setButtonLoading(submitBtn, false);
     }
@@ -418,12 +414,8 @@ expenseForm.addEventListener('submit', async (e) => {
         document.getElementById('expenseDate').valueAsDate = new Date();
         customCategoryGroup.style.display = 'none';
         customCategory.required = false;
-        
-        // Use requestAnimationFrame for smoother UI updates
-        requestAnimationFrame(() => {
-            updateUI();
-            showNotification('✅ Dépense ajoutée avec succès !', 'success');
-        });
+        updateUI();
+        showNotification('✅ Dépense ajoutée avec succès !', 'success');
     } finally {
         setButtonLoading(submitBtn, false);
     }

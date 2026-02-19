@@ -15,6 +15,11 @@
     }
 }
 
+.btn-spinner {
+    display: inline-block;
+    animation: spin 1s linear infinite;
+}
+
 /* PIN Modal */
 .pin-modal {
     position: fixed;
@@ -290,7 +295,6 @@ header p {
     position: relative;
     overflow: hidden;
     transform: translateZ(0); /* GPU acceleration */
-    will-change: transform;
 }
 
 .stat-card::before {
@@ -411,7 +415,6 @@ header p {
     text-transform: uppercase;
     letter-spacing: 1px;
     transform: translateZ(0); /* GPU acceleration */
-    will-change: transform;
 }
 
 .btn:disabled {
@@ -530,7 +533,6 @@ header p {
                 box-shadow 0.2s ease;
     border-left: 5px solid transparent;
     transform: translateZ(0); /* GPU acceleration */
-    will-change: transform;
 }
 
 .transaction-item:hover {
