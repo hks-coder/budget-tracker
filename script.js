@@ -238,7 +238,7 @@ async function switchProfile(newProfile) {
     ]);
     
     // Run migration after data is loaded
-    migrateAssuranceVieCategory();
+    await migrateAssuranceVieCategory();
     
     // Update UI
     updateUI();
@@ -1790,7 +1790,7 @@ if (importProfileBtn) {
 }
 
 // One-time migration: Update old "Assurance Vie" category to "Épargne - Assurance Vie"
-function migrateAssuranceVieCategory() {
+async function migrateAssuranceVieCategory() {
     const migrationKey = `migrated_assurance_vie_${currentProfile}`;
     const alreadyMigrated = localStorage.getItem(migrationKey);
     
@@ -1823,10 +1823,25 @@ function migrateAssuranceVieCategory() {
     
     // Save only if changes were made
     if (transactionsMigrated) {
-        saveData();
+        await saveTransactions();
     }
     if (archivesMigrated) {
-        saveArchive();
+        // Save all archived months
+        localStorage.setItem(`archived_${currentProfile}`, JSON.stringify(archivedMonths));
+        // Sync to Firebase if enabled
+        if (useFirebase && db) {
+            try {
+                for (const archive of archivedMonths) {
+                    await db.collection('profiles')
+                        .doc(currentProfile)
+                        .collection('archived')
+                        .doc(archive.key)
+                        .set(archive);
+                }
+            } catch (error) {
+                console.error('❌ Error syncing migrated archives:', error);
+            }
+        }
     }
     
     if (transactionsMigrated || archivesMigrated) {
@@ -1837,10 +1852,13 @@ function migrateAssuranceVieCategory() {
     localStorage.setItem(migrationKey, 'true');
 }
 
-// Run migration before initializing UI
-migrateAssuranceVieCategory();
-
-// Initialiser
-updateUI();
-updateMonthInfo();
-displayCustomFieldsValues();
+// Initialize app
+(async function initializeApp() {
+    // Run migration after data is loaded from localStorage (lines 68-69)
+    await migrateAssuranceVieCategory();
+    
+    // Initialize UI
+    updateUI();
+    updateMonthInfo();
+    displayCustomFieldsValues();
+})();
