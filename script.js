@@ -237,6 +237,9 @@ async function switchProfile(newProfile) {
         loadCustomFields()
     ]);
     
+    // Run migration after data is loaded
+    migrateAssuranceVieCategory();
+    
     // Update UI
     updateUI();
     updateHeaderProfileInfo();
