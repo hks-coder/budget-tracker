@@ -12,6 +12,44 @@ const MONTH_NAMES = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
                      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 const BAR_CHART_HEIGHT_PERCENTAGE = 85; // Reserve 15% for category labels below bars
 
+// Performance Utilities
+
+/**
+ * Creates a debounced version of a function that delays its execution
+ * until after a specified wait time has elapsed since the last call.
+ * Useful for optimizing performance of frequently-called functions like search filters.
+ * @param {Function} func - The function to debounce
+ * @param {number} wait - The delay in milliseconds
+ * @returns {Function} The debounced function
+ */
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+/**
+ * Sets the loading state of a button, showing a spinner and disabling interaction.
+ * Preserves the original button text to restore it when loading is complete.
+ * @param {HTMLButtonElement} button - The button element to modify
+ * @param {boolean} isLoading - True to show loading state, false to restore normal state
+ */
+function setButtonLoading(button, isLoading) {
+    if (isLoading) {
+        button.disabled = true;
+        button.dataset.originalText = button.textContent;
+        button.innerHTML = '<span class="btn-spinner">⏳</span> Traitement...';
+    } else {
+        button.disabled = false;
+        button.textContent = button.dataset.originalText || button.textContent;
+    }
+}
+
 // Firebase initialization
 let useFirebase = false;
 let db = null;
@@ -255,7 +293,7 @@ function updateHeaderProfileInfo() {
 }
 
 // Ajouter un revenu
-incomeForm.addEventListener('submit', (e) => {
+incomeForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const amount = parseFloat(document.getElementById('incomeAmount').value);
@@ -294,26 +332,33 @@ incomeForm.addEventListener('submit', (e) => {
         return;
     }
     
-    const transaction = {
-        id: Date.now(),
-        type: 'income',
-        amount: amount,
-        category: category,
-        description: description,
-        date: date
-    };
+    // All validation passed, show loading state
+    const submitBtn = incomeForm.querySelector('button[type="submit"]');
+    setButtonLoading(submitBtn, true);
     
-    transactions.push(transaction);
-    saveTransactions();
-    incomeForm.reset();
-    document.getElementById('incomeDate').valueAsDate = new Date();
-    updateUI();
-    
-    showNotification('Revenu ajouté avec succès !', 'success');
+    try {
+        const transaction = {
+            id: Date.now(),
+            type: 'income',
+            amount: amount,
+            category: category,
+            description: description,
+            date: date
+        };
+        
+        transactions.push(transaction);
+        await saveTransactions();
+        incomeForm.reset();
+        document.getElementById('incomeDate').valueAsDate = new Date();
+        updateUI();
+        showNotification('✅ Revenu ajouté avec succès !', 'success');
+    } finally {
+        setButtonLoading(submitBtn, false);
+    }
 });
 
 // Ajouter une dépense
-expenseForm.addEventListener('submit', (e) => {
+expenseForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
     let categoryValue = expenseCategory.value;
@@ -365,24 +410,31 @@ expenseForm.addEventListener('submit', (e) => {
         return;
     }
     
-    const transaction = {
-        id: Date.now(),
-        type: 'expense',
-        amount: amount,
-        category: categoryValue,
-        description: description,
-        date: date
-    };
+    // All validation passed, show loading state
+    const submitBtn = expenseForm.querySelector('button[type="submit"]');
+    setButtonLoading(submitBtn, true);
     
-    transactions.push(transaction);
-    saveTransactions();
-    expenseForm.reset();
-    document.getElementById('expenseDate').valueAsDate = new Date();
-    customCategoryGroup.style.display = 'none';
-    customCategory.required = false;
-    updateUI();
-    
-    showNotification('Dépense ajoutée avec succès !', 'success');
+    try {
+        const transaction = {
+            id: Date.now(),
+            type: 'expense',
+            amount: amount,
+            category: categoryValue,
+            description: description,
+            date: date
+        };
+        
+        transactions.push(transaction);
+        await saveTransactions();
+        expenseForm.reset();
+        document.getElementById('expenseDate').valueAsDate = new Date();
+        customCategoryGroup.style.display = 'none';
+        customCategory.required = false;
+        updateUI();
+        showNotification('✅ Dépense ajoutée avec succès !', 'success');
+    } finally {
+        setButtonLoading(submitBtn, false);
+    }
 });
 
 // Sauvegarder dans localStorage et Firestore (hybride)
@@ -646,9 +698,10 @@ function updateCategoryFilter() {
     });
 }
 
-// Filtres
-filterType.addEventListener('change', displayTransactions);
-filterCategory.addEventListener('change', displayTransactions);
+// Filtres - with debouncing for better performance
+const debouncedDisplayTransactions = debounce(displayTransactions, 300);
+filterType.addEventListener('change', debouncedDisplayTransactions);
+filterCategory.addEventListener('change', debouncedDisplayTransactions);
 
 // Formater la monnaie
 function formatCurrency(amount) {
