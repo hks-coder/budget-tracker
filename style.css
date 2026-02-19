@@ -1265,3 +1265,118 @@ header p {
         padding: 15px;
     }
 }
+
+/* Category Budgets Section Styles */
+.category-budgets-section {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 25px;
+}
+
+.category-budgets-section h2 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.section-description {
+    color: #7f8c8d;
+    margin-bottom: 20px;
+    font-size: 0.95em;
+}
+
+.budget-controls {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.budget-summary-display {
+    margin-top: 20px;
+}
+
+.budget-list {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+.budget-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.budget-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.budget-list::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 4px;
+}
+
+.add-budget-section {
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 25px;
+}
+
+.add-budget-section h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #2c3e50;
+}
+
+.budget-list-section {
+    margin-top: 25px;
+}
+
+.budget-list-section h3 {
+    margin-bottom: 15px;
+    color: #2c3e50;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+    color: white;
+}
+
+.btn-secondary:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+
+/* Responsive styles for budget section */
+@media (max-width: 768px) {
+    .category-budgets-section {
+        padding: 15px;
+    }
+    
+    .budget-controls {
+        flex-direction: column;
+    }
+    
+    .budget-controls button {
+        width: 100%;
+    }
+    
+    .budget-summary-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
