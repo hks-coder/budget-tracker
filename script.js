@@ -67,6 +67,7 @@ function safeLoadFromStorage(key, defaultValue = []) {
 // Données
 let transactions = safeLoadFromStorage(`transactions_${currentProfile}`, []);
 let archivedMonths = safeLoadFromStorage(`archived_${currentProfile}`, []);
+let categoryBudgets = safeLoadFromStorage(`categoryBudgets_${currentProfile}`, {});
 
 // Éléments du DOM
 const profileSelect = document.getElementById('profileSelect');
@@ -234,7 +235,8 @@ async function switchProfile(newProfile) {
     await Promise.all([
         loadTransactions(),
         loadArchives(),
-        loadCustomFields()
+        loadCustomFields(),
+        loadCategoryBudgets()
     ]);
     
     // Update UI
@@ -453,6 +455,52 @@ async function loadTransactions() {
     return transactions;
 }
 
+// Sauvegarder les budgets de catégories
+async function saveCategoryBudgets() {
+    // Sauvegarder en localStorage
+    localStorage.setItem(`categoryBudgets_${currentProfile}`, JSON.stringify(categoryBudgets));
+    
+    // Sauvegarder dans Firestore si disponible
+    if (useFirebase && db) {
+        try {
+            await db.collection('profiles')
+                .doc(currentProfile)
+                .collection('settings')
+                .doc('categoryBudgets')
+                .set({ budgets: categoryBudgets });
+            console.log('✅ Budgets de catégories synchronisés avec Firebase');
+        } catch (error) {
+            console.error('❌ Erreur de synchronisation des budgets:', error);
+        }
+    }
+}
+
+// Charger les budgets de catégories
+async function loadCategoryBudgets() {
+    if (useFirebase && db) {
+        try {
+            const doc = await db.collection('profiles')
+                .doc(currentProfile)
+                .collection('settings')
+                .doc('categoryBudgets')
+                .get();
+            
+            if (doc.exists) {
+                categoryBudgets = doc.data().budgets || {};
+                localStorage.setItem(`categoryBudgets_${currentProfile}`, JSON.stringify(categoryBudgets));
+                console.log('✅ Budgets de catégories chargés depuis Firebase');
+                return categoryBudgets;
+            }
+        } catch (error) {
+            console.error('❌ Erreur de chargement des budgets:', error);
+        }
+    }
+    
+    // Fallback vers localStorage
+    categoryBudgets = safeLoadFromStorage(`categoryBudgets_${currentProfile}`, {});
+    return categoryBudgets;
+}
+
 // Mettre à jour l'interface
 function updateUI() {
     updateSummary();
@@ -460,6 +508,7 @@ function updateUI() {
     updateCategoryFilter();
     updateExpenseChart();
     updateMonthInfo();
+    updateBudgetSummaryDisplay();
     // updateCustomFieldsDisplay(); // Function not implemented yet
 }
 
@@ -691,10 +740,33 @@ function updateExpenseChart() {
     // Note: segment.color comes from a predefined colors array (lines 421-434), ensuring safety
     pieSegments.forEach((segment, index) => {
         const barHeight = (segment.amount / maxAmount) * 100;
+        const hasBudget = categoryBudgets[segment.category];
+        const budget = hasBudget ? categoryBudgets[segment.category] : 0;
+        const budgetHeight = hasBudget ? (budget / maxAmount) * 100 : 0;
+        const isOverBudget = hasBudget && segment.amount > budget;
         
         chartHTML += `
             <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-width: 80px; max-width: 120px;">
                 <div style="width: 100%; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: ${BAR_CHART_HEIGHT_PERCENTAGE}%;">
+                    ${hasBudget ? `
+                        <div style="
+                            position: absolute;
+                            bottom: ${budgetHeight}%;
+                            width: 110%;
+                            height: 2px;
+                            background: ${isOverBudget ? '#e74c3c' : '#27ae60'};
+                            border-top: 2px dashed ${isOverBudget ? '#e74c3c' : '#27ae60'};
+                            z-index: 10;
+                        "></div>
+                        <div style="
+                            position: absolute;
+                            bottom: calc(${budgetHeight}% + 5px);
+                            font-size: 0.7em;
+                            color: ${isOverBudget ? '#e74c3c' : '#27ae60'};
+                            font-weight: bold;
+                            white-space: nowrap;
+                        ">Budget: ${formatCurrency(budget)}</div>
+                    ` : ''}
                     <div class="vertical-bar" style="
                         position: absolute;
                         bottom: 0;
@@ -708,19 +780,21 @@ function updateExpenseChart() {
                         flex-direction: column;
                         align-items: center;
                         justify-content: flex-end;
-                        background: linear-gradient(to top, ${segment.color}, ${segment.color}dd);
+                        background: linear-gradient(to top, ${isOverBudget ? '#e74c3c' : segment.color}, ${isOverBudget ? '#c0392b' : segment.color}dd);
                         border-radius: 8px 8px 0 0;
                         transition: all 0.3s ease;
                         cursor: pointer;
                         height: ${barHeight}%;
                         min-height: ${MIN_BAR_HEIGHT}px;
+                        ${isOverBudget ? 'box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);' : ''}
                     ">
                         <div style="margin-top: auto; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">${formatCurrency(segment.amount)}</div>
                         <div style="font-size: 0.8em; margin-top: 5px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">${segment.percentage}%</div>
                     </div>
                 </div>
-                <div style="margin-top: 10px; font-weight: 600; color: #2c3e50; text-align: center; font-size: 0.85em; word-wrap: break-word; width: 100%;">
+                <div style="margin-top: 10px; font-weight: 600; color: ${isOverBudget ? '#e74c3c' : '#2c3e50'}; text-align: center; font-size: 0.85em; word-wrap: break-word; width: 100%;">
                     ${segment.category}
+                    ${isOverBudget ? '<br/><span style="font-size: 0.8em; color: #e74c3c;">⚠️ Budget dépassé</span>' : ''}
                 </div>
             </div>
         `;
@@ -1687,7 +1761,8 @@ function exportProfileData() {
             transactions: transactions,
             archivedMonths: archivedMonths,
             customFields: customFields,
-            customFieldValues: customFieldValues
+            customFieldValues: customFieldValues,
+            categoryBudgets: categoryBudgets
         };
         
         // Convert to JSON string
@@ -1709,6 +1784,271 @@ function exportProfileData() {
         console.error('Error exporting data:', error);
         showNotification('❌ Erreur lors de l\'exportation des données', 'error');
     }
+}
+
+// ============= BUDGET MANAGEMENT =============
+
+// DOM Elements for Budget Management
+const manageBudgetsBtn = document.getElementById('manageBudgets');
+const viewBudgetSummaryBtn = document.getElementById('viewBudgetSummary');
+const budgetManagementModal = document.getElementById('budgetManagementModal');
+const closeBudgetModal = document.getElementById('closeBudgetModal');
+const budgetForm = document.getElementById('budgetForm');
+const budgetCategory = document.getElementById('budgetCategory');
+const budgetAmount = document.getElementById('budgetAmount');
+const budgetList = document.getElementById('budgetList');
+const budgetSummaryDisplay = document.getElementById('budgetSummaryDisplay');
+
+// Open Budget Management Modal
+if (manageBudgetsBtn) {
+    manageBudgetsBtn.addEventListener('click', () => {
+        populateBudgetCategoryDropdown();
+        displayBudgetList();
+        budgetManagementModal.style.display = 'block';
+    });
+}
+
+// Populate budget category dropdown with all available categories
+function populateBudgetCategoryDropdown() {
+    if (!budgetCategory) return;
+    
+    // Get all unique expense categories from transactions
+    const expenseCategories = getExpenseCategories();
+    
+    // Clear current options except the first one
+    while (budgetCategory.options.length > 1) {
+        budgetCategory.remove(1);
+    }
+    
+    // Add default categories first
+    const defaultCategories = [
+        'Courses', 'Appartement', 'Shopping', 'Transport', 'Loisirs', 
+        'Santé', 'Restaurant', 'Éducation', 'Épargne', 'Assurance Vie', 
+        'Frais Bancaire', 'Autre'
+    ];
+    
+    // Combine default and custom categories, remove duplicates
+    const allCategories = [...new Set([...defaultCategories, ...expenseCategories])].sort();
+    
+    allCategories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat;
+        option.textContent = cat;
+        budgetCategory.appendChild(option);
+    });
+}
+
+// Close Budget Modal
+if (closeBudgetModal) {
+    closeBudgetModal.addEventListener('click', () => {
+        budgetManagementModal.style.display = 'none';
+    });
+}
+
+// Close modal when clicking outside
+window.addEventListener('click', (event) => {
+    if (event.target === budgetManagementModal) {
+        budgetManagementModal.style.display = 'none';
+    }
+});
+
+// Handle Budget Form Submission
+if (budgetForm) {
+    budgetForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const category = budgetCategory.value;
+        const amount = parseFloat(budgetAmount.value);
+        
+        if (!category || isNaN(amount) || amount <= 0) {
+            showNotification('⚠️ Veuillez remplir tous les champs correctement', 'warning');
+            return;
+        }
+        
+        // Save or update budget
+        categoryBudgets[category] = amount;
+        await saveCategoryBudgets();
+        
+        // Reset form
+        budgetForm.reset();
+        
+        // Update displays
+        displayBudgetList();
+        updateBudgetSummaryDisplay();
+        updateUI();
+        
+        showNotification(`✅ Budget de ${formatCurrency(amount)} défini pour ${category}`, 'success');
+    });
+}
+
+// Display Budget List in Modal
+function displayBudgetList() {
+    if (!budgetList) return;
+    
+    budgetList.innerHTML = '';
+    
+    const categories = Object.keys(categoryBudgets).sort();
+    
+    if (categories.length === 0) {
+        budgetList.innerHTML = '<p style="text-align: center; color: #7f8c8d; padding: 20px;">Aucun budget défini. Ajoutez-en un ci-dessus.</p>';
+        return;
+    }
+    
+    categories.forEach(category => {
+        const budget = categoryBudgets[category];
+        const spent = calculateCategorySpent(category);
+        const remaining = budget - spent;
+        const percentUsed = budget > 0 ? (spent / budget) * 100 : 0;
+        
+        const budgetItem = document.createElement('div');
+        budgetItem.className = 'budget-item';
+        budgetItem.style.cssText = 'padding: 15px; margin-bottom: 10px; background: #f8f9fa; border-radius: 8px; border-left: 4px solid ' + getBudgetColor(percentUsed);
+        
+        budgetItem.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h4 style="margin: 0; font-size: 1.1em;">${category}</h4>
+                <button class="btn-delete-budget" data-category="${category}" style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;">🗑️ Supprimer</button>
+            </div>
+            <div style="margin-bottom: 8px;">
+                <div style="display: flex; justify-content: space-between; font-size: 0.9em; color: #7f8c8d; margin-bottom: 5px;">
+                    <span>Budget: ${formatCurrency(budget)}</span>
+                    <span>Dépensé: ${formatCurrency(spent)}</span>
+                </div>
+                <div style="background: #e0e0e0; height: 10px; border-radius: 5px; overflow: hidden;">
+                    <div style="width: ${Math.min(percentUsed, 100)}%; height: 100%; background: ${getBudgetColor(percentUsed)}; transition: width 0.3s;"></div>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.95em;">
+                <span style="color: ${remaining >= 0 ? '#27ae60' : '#e74c3c'}; font-weight: bold;">
+                    ${remaining >= 0 ? 'Reste' : 'Dépassement'}: ${formatCurrency(Math.abs(remaining))}
+                </span>
+                <span style="color: #7f8c8d;">${percentUsed.toFixed(1)}% utilisé</span>
+            </div>
+        `;
+        
+        budgetList.appendChild(budgetItem);
+    });
+    
+    // Add delete event listeners
+    document.querySelectorAll('.btn-delete-budget').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const category = e.target.dataset.category;
+            if (confirm(`Êtes-vous sûr de vouloir supprimer le budget pour "${category}" ?`)) {
+                delete categoryBudgets[category];
+                await saveCategoryBudgets();
+                displayBudgetList();
+                updateBudgetSummaryDisplay();
+                updateUI();
+                showNotification(`✅ Budget supprimé pour ${category}`, 'success');
+            }
+        });
+    });
+}
+
+// Calculate amount spent in a category
+function calculateCategorySpent(category) {
+    return transactions
+        .filter(t => t.type === 'expense' && t.category === category)
+        .reduce((sum, t) => sum + t.amount, 0);
+}
+
+// Get color based on budget usage percentage
+function getBudgetColor(percentUsed) {
+    if (percentUsed >= 100) return '#e74c3c'; // Red - exceeded
+    if (percentUsed >= 80) return '#e67e22'; // Orange - warning
+    if (percentUsed >= 60) return '#f39c12'; // Yellow - caution
+    return '#27ae60'; // Green - safe
+}
+
+// Get all unique expense categories from transactions
+function getExpenseCategories() {
+    return [...new Set(transactions
+        .filter(t => t.type === 'expense')
+        .map(t => t.category))];
+}
+
+// Update Budget Summary Display
+function updateBudgetSummaryDisplay() {
+    if (!budgetSummaryDisplay) return;
+    
+    const categories = Object.keys(categoryBudgets).sort();
+    
+    if (categories.length === 0) {
+        budgetSummaryDisplay.innerHTML = '<p style="text-align: center; color: #7f8c8d; padding: 20px;">Aucun budget défini. Cliquez sur "Gérer les Budgets" pour en ajouter.</p>';
+        return;
+    }
+    
+    let totalBudget = 0;
+    let totalSpent = 0;
+    let html = '<div class="budget-summary-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px; margin-top: 15px;">';
+    
+    categories.forEach(category => {
+        const budget = categoryBudgets[category];
+        const spent = calculateCategorySpent(category);
+        const remaining = budget - spent;
+        const percentUsed = budget > 0 ? (spent / budget) * 100 : 0;
+        
+        totalBudget += budget;
+        totalSpent += spent;
+        
+        html += `
+            <div class="budget-summary-card" style="padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 4px solid ${getBudgetColor(percentUsed)};">
+                <h4 style="margin: 0 0 10px 0; font-size: 1em;">${category}</h4>
+                <div style="margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 0.85em; color: #7f8c8d; margin-bottom: 5px;">
+                        <span>${formatCurrency(spent)}</span>
+                        <span>${formatCurrency(budget)}</span>
+                    </div>
+                    <div style="background: #e0e0e0; height: 8px; border-radius: 4px; overflow: hidden;">
+                        <div style="width: ${Math.min(percentUsed, 100)}%; height: 100%; background: ${getBudgetColor(percentUsed)};"></div>
+                    </div>
+                </div>
+                <div style="font-size: 0.9em; color: ${remaining >= 0 ? '#27ae60' : '#e74c3c'}; font-weight: bold;">
+                    ${remaining >= 0 ? 'Reste' : 'Dépassement'}: ${formatCurrency(Math.abs(remaining))}
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    
+    // Add total summary
+    const totalRemaining = totalBudget - totalSpent;
+    const totalPercentUsed = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
+    
+    html = `
+        <div class="budget-total-summary" style="padding: 20px; background: #ecf0f1; border-radius: 8px; margin-bottom: 20px;">
+            <h3 style="margin: 0 0 15px 0;">📊 Résumé Global</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px;">
+                <div>
+                    <div style="font-size: 0.9em; color: #7f8c8d;">Budget Total</div>
+                    <div style="font-size: 1.5em; font-weight: bold; color: #3498db;">${formatCurrency(totalBudget)}</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.9em; color: #7f8c8d;">Total Dépensé</div>
+                    <div style="font-size: 1.5em; font-weight: bold; color: #e74c3c;">${formatCurrency(totalSpent)}</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.9em; color: #7f8c8d;">${totalRemaining >= 0 ? 'Total Restant' : 'Dépassement Total'}</div>
+                    <div style="font-size: 1.5em; font-weight: bold; color: ${totalRemaining >= 0 ? '#27ae60' : '#e74c3c'};">${formatCurrency(Math.abs(totalRemaining))}</div>
+                </div>
+                <div>
+                    <div style="font-size: 0.9em; color: #7f8c8d;">Pourcentage Utilisé</div>
+                    <div style="font-size: 1.5em; font-weight: bold; color: ${getBudgetColor(totalPercentUsed)};">${totalPercentUsed.toFixed(1)}%</div>
+                </div>
+            </div>
+        </div>
+    ` + html;
+    
+    budgetSummaryDisplay.innerHTML = html;
+}
+
+// View Budget Summary
+if (viewBudgetSummaryBtn) {
+    viewBudgetSummaryBtn.addEventListener('click', () => {
+        updateBudgetSummaryDisplay();
+        budgetSummaryDisplay.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    });
 }
 
 function importProfileData() {
@@ -1750,15 +2090,21 @@ function importProfileData() {
                                     typeof importedData.customFieldValues === 'object' && 
                                     !Array.isArray(importedData.customFieldValues)) ? 
                                     importedData.customFieldValues : {};
+                categoryBudgets = (importedData.categoryBudgets && 
+                                  typeof importedData.categoryBudgets === 'object' && 
+                                  !Array.isArray(importedData.categoryBudgets)) ? 
+                                  importedData.categoryBudgets : {};
                 
                 // Save to localStorage
                 saveTransactions();
                 saveArchive();
                 saveCustomFields();
+                saveCategoryBudgets();
                 
                 // Update UI
                 updateUI();
                 displayCustomFieldsValues();
+                updateBudgetSummaryDisplay();
                 
                 showNotification('✅ Données importées avec succès !', 'success');
             } catch (error) {
@@ -1790,3 +2136,4 @@ if (importProfileBtn) {
 updateUI();
 updateMonthInfo();
 displayCustomFieldsValues();
+updateBudgetSummaryDisplay();

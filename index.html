@@ -152,6 +152,20 @@
             </div>
         </section>
 
+        <!-- Category Budgets Section -->
+        <section class="category-budgets-section">
+            <h2>💳 Budgets par Catégorie</h2>
+            <p class="section-description">Définissez un budget mensuel pour chaque catégorie de dépenses</p>
+            
+            <div class="budget-controls">
+                <button class="btn btn-primary" id="manageBudgets">⚙️ Gérer les Budgets</button>
+                <button class="btn btn-secondary" id="viewBudgetSummary">📊 Voir le Résumé</button>
+            </div>
+            
+            <!-- Budget Summary Display -->
+            <div id="budgetSummaryDisplay" class="budget-summary-display"></div>
+        </section>
+
         <!-- Monthly Operations -->
         <section class="monthly-operations">
             <h2>📅 Gestion Mensuelle</h2>
@@ -223,6 +237,51 @@
                     <button class="btn btn-export-all" id="exportAllArchives">📊 Exporter Tout en Excel</button>
                 </div>
                 <div id="archivesList"></div>
+            </div>
+        </div>
+
+        <!-- Budget Management Modal -->
+        <div id="budgetManagementModal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="close-modal" id="closeBudgetModal">&times;</span>
+                <h2>💳 Gérer les Budgets de Catégories</h2>
+                <p class="modal-description">Définissez un budget mensuel pour chaque catégorie de dépenses. Le système vous alertera lorsque vous approchez ou dépassez le budget.</p>
+                
+                <!-- Add Budget Form -->
+                <div class="add-budget-section">
+                    <h3>➕ Ajouter/Modifier un Budget</h3>
+                    <form id="budgetForm">
+                        <div class="form-group">
+                            <label for="budgetCategory">Catégorie</label>
+                            <select id="budgetCategory" required>
+                                <option value="">Sélectionnez une catégorie</option>
+                                <option value="Courses">🛒 Courses</option>
+                                <option value="Appartement">🏠 Appartement</option>
+                                <option value="Shopping">🛍️ Shopping</option>
+                                <option value="Transport">🚗 Transport</option>
+                                <option value="Loisirs">🎮 Loisirs</option>
+                                <option value="Santé">⚕️ Santé</option>
+                                <option value="Restaurant">🍽️ Restaurant</option>
+                                <option value="Éducation">📚 Éducation</option>
+                                <option value="Épargne">💰 Épargne</option>
+                                <option value="Assurance Vie">🏥 Assurance Vie</option>
+                                <option value="Frais Bancaire">🏦 Frais Bancaire</option>
+                                <option value="Autre">📦 Autre</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="budgetAmount">Budget Mensuel (€)</label>
+                            <input type="number" id="budgetAmount" step="0.01" min="0" required placeholder="0.00">
+                        </div>
+                        <button type="submit" class="btn btn-primary">💾 Enregistrer le Budget</button>
+                    </form>
+                </div>
+                
+                <!-- Budget List -->
+                <div class="budget-list-section">
+                    <h3>📋 Budgets Actuels</h3>
+                    <div id="budgetList" class="budget-list"></div>
+                </div>
             </div>
         </div>
 
