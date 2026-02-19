@@ -230,10 +230,12 @@ async function switchProfile(newProfile) {
     
     showNotification(`✅ Profil ${newProfile === 'hemank' ? 'Hemank' : 'Jullian'} sélectionné`, 'success');
     
-    // Load new profile's data from Firebase or localStorage
-    await loadTransactions();
-    await loadArchives();
-    await loadCustomFields();
+    // Load new profile's data from Firebase or localStorage (in parallel for better performance)
+    await Promise.all([
+        loadTransactions(),
+        loadArchives(),
+        loadCustomFields()
+    ]);
     
     // Update UI
     updateUI();
@@ -389,7 +391,9 @@ async function saveTransactions() {
             updateSyncStatus('syncing');
             const batch = db.batch();
             
-            // Supprimer les anciennes transactions
+            // Supprimer les anciennes transactions et les remplacer par les nouvelles
+            // Note: Cette approche simple garantit la synchronisation complète mais pourrait être optimisée
+            // en ne mettant à jour que les documents modifiés dans une future version
             const oldTransactions = await db.collection('profiles')
                 .doc(currentProfile)
                 .collection('transactions')
@@ -400,6 +404,7 @@ async function saveTransactions() {
             });
             
             // Ajouter les nouvelles transactions
+            // Utilisation de transaction.id comme document ID pour faciliter les mises à jour futures
             transactions.forEach(transaction => {
                 const docRef = db.collection('profiles')
                     .doc(currentProfile)
@@ -1677,10 +1682,12 @@ async function initializeApp() {
     // Initialiser Firebase
     initializeFirebase();
     
-    // Charger les données depuis Firebase ou localStorage
-    await loadTransactions();
-    await loadArchives();
-    await loadCustomFields();
+    // Charger les données depuis Firebase ou localStorage (en parallèle pour de meilleures performances)
+    await Promise.all([
+        loadTransactions(),
+        loadArchives(),
+        loadCustomFields()
+    ]);
     
     // Mettre à jour l'interface
     updateUI();
