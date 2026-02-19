@@ -104,12 +104,18 @@
                         <select id="expenseCategory" required>
                             <option value="">Sélectionnez une catégorie</option>
                             <option value="Courses">🛒 Courses</option>
-                            <option value="Appartement">🏠 Appartement</option>
+                            <optgroup label="🏠 Appartement">
+                                <option value="Appartement">🏠 Appartement (général)</option>
+                                <option value="Appartement > Box">📦 Box</option>
+                                <option value="Appartement > SFR">📡 SFR</option>
+                            </optgroup>
                             <option value="Shopping">🛍️ Shopping</option>
                             <option value="Transport">🚗 Transport</option>
-                            <option value="Loisirs">🎮 Loisirs</option>
+                            <optgroup label="🎮 Loisirs">
+                                <option value="Loisirs">🎮 Loisirs (général)</option>
+                                <option value="Loisirs > Restaurant">🍽️ Restaurant</option>
+                            </optgroup>
                             <option value="Santé">⚕️ Santé</option>
-                            <option value="Restaurant">🍽️ Restaurant</option>
                             <option value="Éducation">📚 Éducation</option>
                             <option value="Épargne">💰 Épargne</option>
                             <option value="Assurance Vie">🏥 Assurance Vie</option>
