@@ -13,6 +13,15 @@ const MONTH_NAMES = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
 const BAR_CHART_HEIGHT_PERCENTAGE = 85; // Reserve 15% for category labels below bars
 
 // Performance Utilities
+
+/**
+ * Creates a debounced version of a function that delays its execution
+ * until after a specified wait time has elapsed since the last call.
+ * Useful for optimizing performance of frequently-called functions like search filters.
+ * @param {Function} func - The function to debounce
+ * @param {number} wait - The delay in milliseconds
+ * @returns {Function} The debounced function
+ */
 function debounce(func, wait) {
     let timeout;
     return function executedFunction(...args) {
@@ -24,6 +33,12 @@ function debounce(func, wait) {
     };
 }
 
+/**
+ * Sets the loading state of a button, showing a spinner and disabling interaction.
+ * Preserves the original button text to restore it when loading is complete.
+ * @param {HTMLButtonElement} button - The button element to modify
+ * @param {boolean} isLoading - True to show loading state, false to restore normal state
+ */
 function setButtonLoading(button, isLoading) {
     if (isLoading) {
         button.disabled = true;
