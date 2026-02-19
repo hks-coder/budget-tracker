@@ -282,46 +282,47 @@ function updateHeaderProfileInfo() {
 incomeForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    const amount = parseFloat(document.getElementById('incomeAmount').value);
+    const category = document.getElementById('incomeCategory').value;
+    const description = document.getElementById('incomeDescription').value.trim();
+    const date = document.getElementById('incomeDate').value;
+    
+    // Input validation
+    if (isNaN(amount) || amount <= 0) {
+        showNotification('⚠️ Veuillez entrer un montant valide (supérieur à 0)', 'warning');
+        return;
+    }
+    
+    if (amount > 999999999) {
+        showNotification('⚠️ Le montant est trop élevé', 'warning');
+        return;
+    }
+    
+    if (!category) {
+        showNotification('⚠️ Veuillez sélectionner une catégorie', 'warning');
+        return;
+    }
+    
+    if (!description) {
+        showNotification('⚠️ Veuillez entrer une description', 'warning');
+        return;
+    }
+    
+    if (description.length > 200) {
+        showNotification('⚠️ La description est trop longue (maximum 200 caractères)', 'warning');
+        return;
+    }
+    
+    if (!date) {
+        showNotification('⚠️ Veuillez sélectionner une date', 'warning');
+        return;
+    }
+    
+    // All validation passed, show loading state
     const submitBtn = incomeForm.querySelector('button[type="submit"]');
     setButtonLoading(submitBtn, true);
     
     try {
-        const amount = parseFloat(document.getElementById('incomeAmount').value);
-        const category = document.getElementById('incomeCategory').value;
-        const description = document.getElementById('incomeDescription').value.trim();
-        const date = document.getElementById('incomeDate').value;
-        
-        // Input validation
-        if (isNaN(amount) || amount <= 0) {
-            showNotification('⚠️ Veuillez entrer un montant valide (supérieur à 0)', 'warning');
-            return;
-        }
-        
-        if (amount > 999999999) {
-            showNotification('⚠️ Le montant est trop élevé', 'warning');
-            return;
-        }
-        
-        if (!category) {
-            showNotification('⚠️ Veuillez sélectionner une catégorie', 'warning');
-            return;
-        }
-        
-        if (!description) {
-            showNotification('⚠️ Veuillez entrer une description', 'warning');
-            return;
-        }
-        
-        if (description.length > 200) {
-            showNotification('⚠️ La description est trop longue (maximum 200 caractères)', 'warning');
-            return;
-        }
-        
-        if (!date) {
-            showNotification('⚠️ Veuillez sélectionner une date', 'warning');
-            return;
-        }
-        
         const transaction = {
             id: Date.now(),
             type: 'income',
@@ -346,59 +347,60 @@ incomeForm.addEventListener('submit', async (e) => {
 expenseForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    let categoryValue = expenseCategory.value;
+    const amount = parseFloat(document.getElementById('expenseAmount').value);
+    const description = document.getElementById('expenseDescription').value.trim();
+    const date = document.getElementById('expenseDate').value;
+    
+    // Input validation
+    if (isNaN(amount) || amount <= 0) {
+        showNotification('⚠️ Veuillez entrer un montant valide (supérieur à 0)', 'warning');
+        return;
+    }
+    
+    if (amount > 999999999) {
+        showNotification('⚠️ Le montant est trop élevé', 'warning');
+        return;
+    }
+    
+    // If custom category is selected, use the custom input value
+    if (categoryValue === 'custom') {
+        categoryValue = customCategory.value.trim();
+        if (!categoryValue) {
+            showNotification('⚠️ Veuillez entrer un nom de catégorie', 'warning');
+            return;
+        }
+        if (categoryValue.length > 50) {
+            showNotification('⚠️ Le nom de catégorie est trop long (maximum 50 caractères)', 'warning');
+            return;
+        }
+    }
+    
+    if (!categoryValue) {
+        showNotification('⚠️ Veuillez sélectionner une catégorie', 'warning');
+        return;
+    }
+    
+    if (!description) {
+        showNotification('⚠️ Veuillez entrer une description', 'warning');
+        return;
+    }
+    
+    if (description.length > 200) {
+        showNotification('⚠️ La description est trop longue (maximum 200 caractères)', 'warning');
+        return;
+    }
+    
+    if (!date) {
+        showNotification('⚠️ Veuillez sélectionner une date', 'warning');
+        return;
+    }
+    
+    // All validation passed, show loading state
     const submitBtn = expenseForm.querySelector('button[type="submit"]');
     setButtonLoading(submitBtn, true);
     
     try {
-        let categoryValue = expenseCategory.value;
-        const amount = parseFloat(document.getElementById('expenseAmount').value);
-        const description = document.getElementById('expenseDescription').value.trim();
-        const date = document.getElementById('expenseDate').value;
-        
-        // Input validation
-        if (isNaN(amount) || amount <= 0) {
-            showNotification('⚠️ Veuillez entrer un montant valide (supérieur à 0)', 'warning');
-            return;
-        }
-        
-        if (amount > 999999999) {
-            showNotification('⚠️ Le montant est trop élevé', 'warning');
-            return;
-        }
-        
-        // If custom category is selected, use the custom input value
-        if (categoryValue === 'custom') {
-            categoryValue = customCategory.value.trim();
-            if (!categoryValue) {
-                showNotification('⚠️ Veuillez entrer un nom de catégorie', 'warning');
-                return;
-            }
-            if (categoryValue.length > 50) {
-                showNotification('⚠️ Le nom de catégorie est trop long (maximum 50 caractères)', 'warning');
-                return;
-            }
-        }
-        
-        if (!categoryValue) {
-            showNotification('⚠️ Veuillez sélectionner une catégorie', 'warning');
-            return;
-        }
-        
-        if (!description) {
-            showNotification('⚠️ Veuillez entrer une description', 'warning');
-            return;
-        }
-        
-        if (description.length > 200) {
-            showNotification('⚠️ La description est trop longue (maximum 200 caractères)', 'warning');
-            return;
-        }
-        
-        if (!date) {
-            showNotification('⚠️ Veuillez sélectionner une date', 'warning');
-            return;
-        }
-        
         const transaction = {
             id: Date.now(),
             type: 'expense',
