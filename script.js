@@ -239,6 +239,9 @@ async function switchProfile(newProfile) {
         loadCategoryBudgets()
     ]);
     
+    // Run migration after data is loaded
+    await migrateAssuranceVieCategory();
+    
     // Update UI
     updateUI();
     updateHeaderProfileInfo();
@@ -2132,8 +2135,76 @@ if (importProfileBtn) {
     importProfileBtn.addEventListener('click', importProfileData);
 }
 
-// Initialiser
-updateUI();
-updateMonthInfo();
-displayCustomFieldsValues();
-updateBudgetSummaryDisplay();
+// One-time migration: Update old "Assurance Vie" category to "Épargne - Assurance Vie"
+async function migrateAssuranceVieCategory() {
+    const migrationKey = `migrated_assurance_vie_${currentProfile}`;
+    const alreadyMigrated = localStorage.getItem(migrationKey);
+    
+    if (alreadyMigrated) {
+        return; // Migration already done
+    }
+    
+    let transactionsMigrated = false;
+    let archivesMigrated = false;
+    
+    // Migrate transactions
+    transactions.forEach(transaction => {
+        if (transaction.category === 'Assurance Vie') {
+            transaction.category = 'Épargne - Assurance Vie';
+            transactionsMigrated = true;
+        }
+    });
+    
+    // Migrate archived transactions
+    archivedMonths.forEach(archive => {
+        if (archive.transactions) {
+            archive.transactions.forEach(transaction => {
+                if (transaction.category === 'Assurance Vie') {
+                    transaction.category = 'Épargne - Assurance Vie';
+                    archivesMigrated = true;
+                }
+            });
+        }
+    });
+    
+    // Save only if changes were made
+    if (transactionsMigrated) {
+        await saveTransactions();
+    }
+    if (archivesMigrated) {
+        // Save all archived months
+        localStorage.setItem(`archived_${currentProfile}`, JSON.stringify(archivedMonths));
+        // Sync to Firebase if enabled
+        if (useFirebase && db) {
+            try {
+                for (const archive of archivedMonths) {
+                    await db.collection('profiles')
+                        .doc(currentProfile)
+                        .collection('archived')
+                        .doc(archive.key)
+                        .set(archive);
+                }
+            } catch (error) {
+                console.error('❌ Error syncing migrated archives:', error);
+            }
+        }
+    }
+    
+    if (transactionsMigrated || archivesMigrated) {
+        console.log('✅ Migration completed: Updated "Assurance Vie" to "Épargne - Assurance Vie"');
+    }
+    
+    // Mark migration as complete
+    localStorage.setItem(migrationKey, 'true');
+}
+
+// Initialize app
+(async function initializeApp() {
+    // Run migration after data is loaded from localStorage (lines 68-69)
+    await migrateAssuranceVieCategory();
+    
+    // Initialize UI
+    updateUI();
+    updateMonthInfo();
+    displayCustomFieldsValues();
+})();
