@@ -12,6 +12,30 @@ const MONTH_NAMES = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
                      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 const BAR_CHART_HEIGHT_PERCENTAGE = 85; // Reserve 15% for category labels below bars
 
+// Performance Utilities
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+function setButtonLoading(button, isLoading) {
+    if (isLoading) {
+        button.disabled = true;
+        button.dataset.originalText = button.textContent;
+        button.innerHTML = '<span style="display: inline-block; animation: spin 1s linear infinite;">⏳</span> Traitement...';
+    } else {
+        button.disabled = false;
+        button.textContent = button.dataset.originalText || button.textContent;
+    }
+}
+
 // Firebase initialization
 let useFirebase = false;
 let db = null;
@@ -255,134 +279,154 @@ function updateHeaderProfileInfo() {
 }
 
 // Ajouter un revenu
-incomeForm.addEventListener('submit', (e) => {
+incomeForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    const amount = parseFloat(document.getElementById('incomeAmount').value);
-    const category = document.getElementById('incomeCategory').value;
-    const description = document.getElementById('incomeDescription').value.trim();
-    const date = document.getElementById('incomeDate').value;
+    const submitBtn = incomeForm.querySelector('button[type="submit"]');
+    setButtonLoading(submitBtn, true);
     
-    // Input validation
-    if (isNaN(amount) || amount <= 0) {
-        showNotification('⚠️ Veuillez entrer un montant valide (supérieur à 0)', 'warning');
-        return;
+    try {
+        const amount = parseFloat(document.getElementById('incomeAmount').value);
+        const category = document.getElementById('incomeCategory').value;
+        const description = document.getElementById('incomeDescription').value.trim();
+        const date = document.getElementById('incomeDate').value;
+        
+        // Input validation
+        if (isNaN(amount) || amount <= 0) {
+            showNotification('⚠️ Veuillez entrer un montant valide (supérieur à 0)', 'warning');
+            return;
+        }
+        
+        if (amount > 999999999) {
+            showNotification('⚠️ Le montant est trop élevé', 'warning');
+            return;
+        }
+        
+        if (!category) {
+            showNotification('⚠️ Veuillez sélectionner une catégorie', 'warning');
+            return;
+        }
+        
+        if (!description) {
+            showNotification('⚠️ Veuillez entrer une description', 'warning');
+            return;
+        }
+        
+        if (description.length > 200) {
+            showNotification('⚠️ La description est trop longue (maximum 200 caractères)', 'warning');
+            return;
+        }
+        
+        if (!date) {
+            showNotification('⚠️ Veuillez sélectionner une date', 'warning');
+            return;
+        }
+        
+        const transaction = {
+            id: Date.now(),
+            type: 'income',
+            amount: amount,
+            category: category,
+            description: description,
+            date: date
+        };
+        
+        transactions.push(transaction);
+        await saveTransactions();
+        incomeForm.reset();
+        document.getElementById('incomeDate').valueAsDate = new Date();
+        
+        // Use requestAnimationFrame for smoother UI updates
+        requestAnimationFrame(() => {
+            updateUI();
+            showNotification('✅ Revenu ajouté avec succès !', 'success');
+        });
+    } finally {
+        setButtonLoading(submitBtn, false);
     }
-    
-    if (amount > 999999999) {
-        showNotification('⚠️ Le montant est trop élevé', 'warning');
-        return;
-    }
-    
-    if (!category) {
-        showNotification('⚠️ Veuillez sélectionner une catégorie', 'warning');
-        return;
-    }
-    
-    if (!description) {
-        showNotification('⚠️ Veuillez entrer une description', 'warning');
-        return;
-    }
-    
-    if (description.length > 200) {
-        showNotification('⚠️ La description est trop longue (maximum 200 caractères)', 'warning');
-        return;
-    }
-    
-    if (!date) {
-        showNotification('⚠️ Veuillez sélectionner une date', 'warning');
-        return;
-    }
-    
-    const transaction = {
-        id: Date.now(),
-        type: 'income',
-        amount: amount,
-        category: category,
-        description: description,
-        date: date
-    };
-    
-    transactions.push(transaction);
-    saveTransactions();
-    incomeForm.reset();
-    document.getElementById('incomeDate').valueAsDate = new Date();
-    updateUI();
-    
-    showNotification('Revenu ajouté avec succès !', 'success');
 });
 
 // Ajouter une dépense
-expenseForm.addEventListener('submit', (e) => {
+expenseForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    let categoryValue = expenseCategory.value;
-    const amount = parseFloat(document.getElementById('expenseAmount').value);
-    const description = document.getElementById('expenseDescription').value.trim();
-    const date = document.getElementById('expenseDate').value;
+    const submitBtn = expenseForm.querySelector('button[type="submit"]');
+    setButtonLoading(submitBtn, true);
     
-    // Input validation
-    if (isNaN(amount) || amount <= 0) {
-        showNotification('⚠️ Veuillez entrer un montant valide (supérieur à 0)', 'warning');
-        return;
-    }
-    
-    if (amount > 999999999) {
-        showNotification('⚠️ Le montant est trop élevé', 'warning');
-        return;
-    }
-    
-    // If custom category is selected, use the custom input value
-    if (categoryValue === 'custom') {
-        categoryValue = customCategory.value.trim();
+    try {
+        let categoryValue = expenseCategory.value;
+        const amount = parseFloat(document.getElementById('expenseAmount').value);
+        const description = document.getElementById('expenseDescription').value.trim();
+        const date = document.getElementById('expenseDate').value;
+        
+        // Input validation
+        if (isNaN(amount) || amount <= 0) {
+            showNotification('⚠️ Veuillez entrer un montant valide (supérieur à 0)', 'warning');
+            return;
+        }
+        
+        if (amount > 999999999) {
+            showNotification('⚠️ Le montant est trop élevé', 'warning');
+            return;
+        }
+        
+        // If custom category is selected, use the custom input value
+        if (categoryValue === 'custom') {
+            categoryValue = customCategory.value.trim();
+            if (!categoryValue) {
+                showNotification('⚠️ Veuillez entrer un nom de catégorie', 'warning');
+                return;
+            }
+            if (categoryValue.length > 50) {
+                showNotification('⚠️ Le nom de catégorie est trop long (maximum 50 caractères)', 'warning');
+                return;
+            }
+        }
+        
         if (!categoryValue) {
-            showNotification('⚠️ Veuillez entrer un nom de catégorie', 'warning');
+            showNotification('⚠️ Veuillez sélectionner une catégorie', 'warning');
             return;
         }
-        if (categoryValue.length > 50) {
-            showNotification('⚠️ Le nom de catégorie est trop long (maximum 50 caractères)', 'warning');
+        
+        if (!description) {
+            showNotification('⚠️ Veuillez entrer une description', 'warning');
             return;
         }
+        
+        if (description.length > 200) {
+            showNotification('⚠️ La description est trop longue (maximum 200 caractères)', 'warning');
+            return;
+        }
+        
+        if (!date) {
+            showNotification('⚠️ Veuillez sélectionner une date', 'warning');
+            return;
+        }
+        
+        const transaction = {
+            id: Date.now(),
+            type: 'expense',
+            amount: amount,
+            category: categoryValue,
+            description: description,
+            date: date
+        };
+        
+        transactions.push(transaction);
+        await saveTransactions();
+        expenseForm.reset();
+        document.getElementById('expenseDate').valueAsDate = new Date();
+        customCategoryGroup.style.display = 'none';
+        customCategory.required = false;
+        
+        // Use requestAnimationFrame for smoother UI updates
+        requestAnimationFrame(() => {
+            updateUI();
+            showNotification('✅ Dépense ajoutée avec succès !', 'success');
+        });
+    } finally {
+        setButtonLoading(submitBtn, false);
     }
-    
-    if (!categoryValue) {
-        showNotification('⚠️ Veuillez sélectionner une catégorie', 'warning');
-        return;
-    }
-    
-    if (!description) {
-        showNotification('⚠️ Veuillez entrer une description', 'warning');
-        return;
-    }
-    
-    if (description.length > 200) {
-        showNotification('⚠️ La description est trop longue (maximum 200 caractères)', 'warning');
-        return;
-    }
-    
-    if (!date) {
-        showNotification('⚠️ Veuillez sélectionner une date', 'warning');
-        return;
-    }
-    
-    const transaction = {
-        id: Date.now(),
-        type: 'expense',
-        amount: amount,
-        category: categoryValue,
-        description: description,
-        date: date
-    };
-    
-    transactions.push(transaction);
-    saveTransactions();
-    expenseForm.reset();
-    document.getElementById('expenseDate').valueAsDate = new Date();
-    customCategoryGroup.style.display = 'none';
-    customCategory.required = false;
-    updateUI();
-    
-    showNotification('Dépense ajoutée avec succès !', 'success');
 });
 
 // Sauvegarder dans localStorage et Firestore (hybride)
@@ -646,9 +690,10 @@ function updateCategoryFilter() {
     });
 }
 
-// Filtres
-filterType.addEventListener('change', displayTransactions);
-filterCategory.addEventListener('change', displayTransactions);
+// Filtres - with debouncing for better performance
+const debouncedDisplayTransactions = debounce(displayTransactions, 300);
+filterType.addEventListener('change', debouncedDisplayTransactions);
+filterCategory.addEventListener('change', debouncedDisplayTransactions);
 
 // Formater la monnaie
 function formatCurrency(amount) {

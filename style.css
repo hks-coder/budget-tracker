@@ -5,6 +5,16 @@
     box-sizing: border-box;
 }
 
+/* Loading spinner animation */
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 /* PIN Modal */
 .pin-modal {
     position: fixed;
@@ -28,7 +38,8 @@
     max-width: 400px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
     text-align: center;
-    animation: slideDown 0.3s ease;
+    animation: slideDown 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    transform: translateZ(0); /* GPU acceleration */
 }
 
 .pin-modal-content h2 {
@@ -274,9 +285,12 @@ header p {
     border-radius: 15px;
     color: white;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                box-shadow 0.3s ease;
     position: relative;
     overflow: hidden;
+    transform: translateZ(0); /* GPU acceleration */
+    will-change: transform;
 }
 
 .stat-card::before {
@@ -287,12 +301,12 @@ header p {
     width: 200%;
     height: 200%;
     background: rgba(255, 255, 255, 0.1);
-    transform: rotate(45deg);
+    transform: rotate(45deg) translateZ(0);
     transition: all 0.5s ease;
 }
 
 .stat-card:hover {
-    transform: translateY(-5px);
+    transform: translateY(-5px) translateZ(0);
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
 }
 
@@ -371,7 +385,7 @@ header p {
     border: 2px solid #ddd;
     border-radius: 8px;
     font-size: 1em;
-    transition: all 0.3s ease;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
     background: white;
 }
 
@@ -391,9 +405,23 @@ header p {
     font-size: 1em;
     font-weight: bold;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                box-shadow 0.2s ease,
+                opacity 0.2s ease;
     text-transform: uppercase;
     letter-spacing: 1px;
+    transform: translateZ(0); /* GPU acceleration */
+    will-change: transform;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: translateZ(0);
+}
+
+.btn:active:not(:disabled) {
+    transform: translateY(1px) translateZ(0);
 }
 
 .btn-income {
@@ -498,12 +526,15 @@ header p {
     border-radius: 12px;
     background: white;
     box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
+    transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+                box-shadow 0.2s ease;
     border-left: 5px solid transparent;
+    transform: translateZ(0); /* GPU acceleration */
+    will-change: transform;
 }
 
 .transaction-item:hover {
-    transform: translateX(5px);
+    transform: translateX(5px) translateZ(0);
     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
 }
 
@@ -552,12 +583,13 @@ header p {
     border-radius: 8px;
     cursor: pointer;
     font-size: 1.2em;
-    transition: all 0.3s ease;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    transform: translateZ(0); /* GPU acceleration */
 }
 
 .delete-btn:hover {
     background: #ff3838;
-    transform: scale(1.1);
+    transform: scale(1.1) translateZ(0);
 }
 
 /* Section du graphique */
@@ -614,11 +646,11 @@ header p {
 @keyframes fadeIn {
     from {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(20px) translateZ(0);
     }
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) translateZ(0);
     }
 }
 
@@ -627,8 +659,14 @@ header p {
 .filters,
 .transactions,
 .chart-section {
-    animation: fadeIn 0.5s ease;
+    animation: fadeIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    animation-fill-mode: both;
 }
+
+/* Stagger animations for smoother appearance */
+.stat-card:nth-child(1) { animation-delay: 0.05s; }
+.stat-card:nth-child(2) { animation-delay: 0.1s; }
+.stat-card:nth-child(3) { animation-delay: 0.15s; }
 
 /* Amélioration de la lisibilité */
 ::selection {
@@ -653,8 +691,8 @@ header p {
     background: #5568d3;
 }
 
-.btn:hover {
-    transform: translateY(-2px);
+.btn:hover:not(:disabled) {
+    transform: translateY(-2px) translateZ(0);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
