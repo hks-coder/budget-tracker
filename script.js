@@ -740,10 +740,33 @@ function updateExpenseChart() {
     // Note: segment.color comes from a predefined colors array (lines 421-434), ensuring safety
     pieSegments.forEach((segment, index) => {
         const barHeight = (segment.amount / maxAmount) * 100;
+        const hasBudget = categoryBudgets[segment.category];
+        const budget = hasBudget ? categoryBudgets[segment.category] : 0;
+        const budgetHeight = hasBudget ? (budget / maxAmount) * 100 : 0;
+        const isOverBudget = hasBudget && segment.amount > budget;
         
         chartHTML += `
             <div style="flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; min-width: 80px; max-width: 120px;">
                 <div style="width: 100%; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: ${BAR_CHART_HEIGHT_PERCENTAGE}%;">
+                    ${hasBudget ? `
+                        <div style="
+                            position: absolute;
+                            bottom: ${budgetHeight}%;
+                            width: 110%;
+                            height: 2px;
+                            background: ${isOverBudget ? '#e74c3c' : '#27ae60'};
+                            border-top: 2px dashed ${isOverBudget ? '#e74c3c' : '#27ae60'};
+                            z-index: 10;
+                        "></div>
+                        <div style="
+                            position: absolute;
+                            bottom: calc(${budgetHeight}% + 5px);
+                            font-size: 0.7em;
+                            color: ${isOverBudget ? '#e74c3c' : '#27ae60'};
+                            font-weight: bold;
+                            white-space: nowrap;
+                        ">Budget: ${formatCurrency(budget)}</div>
+                    ` : ''}
                     <div class="vertical-bar" style="
                         position: absolute;
                         bottom: 0;
@@ -757,19 +780,21 @@ function updateExpenseChart() {
                         flex-direction: column;
                         align-items: center;
                         justify-content: flex-end;
-                        background: linear-gradient(to top, ${segment.color}, ${segment.color}dd);
+                        background: linear-gradient(to top, ${isOverBudget ? '#e74c3c' : segment.color}, ${isOverBudget ? '#c0392b' : segment.color}dd);
                         border-radius: 8px 8px 0 0;
                         transition: all 0.3s ease;
                         cursor: pointer;
                         height: ${barHeight}%;
                         min-height: ${MIN_BAR_HEIGHT}px;
+                        ${isOverBudget ? 'box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);' : ''}
                     ">
                         <div style="margin-top: auto; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">${formatCurrency(segment.amount)}</div>
                         <div style="font-size: 0.8em; margin-top: 5px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);">${segment.percentage}%</div>
                     </div>
                 </div>
-                <div style="margin-top: 10px; font-weight: 600; color: #2c3e50; text-align: center; font-size: 0.85em; word-wrap: break-word; width: 100%;">
+                <div style="margin-top: 10px; font-weight: 600; color: ${isOverBudget ? '#e74c3c' : '#2c3e50'}; text-align: center; font-size: 0.85em; word-wrap: break-word; width: 100%;">
                     ${segment.category}
+                    ${isOverBudget ? '<br/><span style="font-size: 0.8em; color: #e74c3c;">⚠️ Budget dépassé</span>' : ''}
                 </div>
             </div>
         `;
@@ -1777,8 +1802,41 @@ const budgetSummaryDisplay = document.getElementById('budgetSummaryDisplay');
 // Open Budget Management Modal
 if (manageBudgetsBtn) {
     manageBudgetsBtn.addEventListener('click', () => {
+        populateBudgetCategoryDropdown();
         displayBudgetList();
         budgetManagementModal.style.display = 'block';
+    });
+}
+
+// Populate budget category dropdown with all available categories
+function populateBudgetCategoryDropdown() {
+    if (!budgetCategory) return;
+    
+    // Get all unique expense categories from transactions
+    const expenseCategories = [...new Set(transactions
+        .filter(t => t.type === 'expense')
+        .map(t => t.category))];
+    
+    // Clear current options except the first one
+    while (budgetCategory.options.length > 1) {
+        budgetCategory.remove(1);
+    }
+    
+    // Add default categories first
+    const defaultCategories = [
+        'Courses', 'Appartement', 'Shopping', 'Transport', 'Loisirs', 
+        'Santé', 'Restaurant', 'Éducation', 'Épargne', 'Assurance Vie', 
+        'Frais Bancaire', 'Autre'
+    ];
+    
+    // Combine default and custom categories, remove duplicates
+    const allCategories = [...new Set([...defaultCategories, ...expenseCategories])].sort();
+    
+    allCategories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat;
+        option.textContent = cat;
+        budgetCategory.appendChild(option);
     });
 }
 
