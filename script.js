@@ -1813,9 +1813,7 @@ function populateBudgetCategoryDropdown() {
     if (!budgetCategory) return;
     
     // Get all unique expense categories from transactions
-    const expenseCategories = [...new Set(transactions
-        .filter(t => t.type === 'expense')
-        .map(t => t.category))];
+    const expenseCategories = getExpenseCategories();
     
     // Clear current options except the first one
     while (budgetCategory.options.length > 1) {
@@ -1862,7 +1860,7 @@ if (budgetForm) {
         const category = budgetCategory.value;
         const amount = parseFloat(budgetAmount.value);
         
-        if (!category || isNaN(amount) || amount < 0) {
+        if (!category || isNaN(amount) || amount <= 0) {
             showNotification('⚠️ Veuillez remplir tous les champs correctement', 'warning');
             return;
         }
@@ -1900,7 +1898,7 @@ function displayBudgetList() {
         const budget = categoryBudgets[category];
         const spent = calculateCategorySpent(category);
         const remaining = budget - spent;
-        const percentUsed = (spent / budget) * 100;
+        const percentUsed = budget > 0 ? (spent / budget) * 100 : 0;
         
         const budgetItem = document.createElement('div');
         budgetItem.className = 'budget-item';
@@ -1962,6 +1960,13 @@ function getBudgetColor(percentUsed) {
     return '#27ae60'; // Green - safe
 }
 
+// Get all unique expense categories from transactions
+function getExpenseCategories() {
+    return [...new Set(transactions
+        .filter(t => t.type === 'expense')
+        .map(t => t.category))];
+}
+
 // Update Budget Summary Display
 function updateBudgetSummaryDisplay() {
     if (!budgetSummaryDisplay) return;
@@ -1981,7 +1986,7 @@ function updateBudgetSummaryDisplay() {
         const budget = categoryBudgets[category];
         const spent = calculateCategorySpent(category);
         const remaining = budget - spent;
-        const percentUsed = (spent / budget) * 100;
+        const percentUsed = budget > 0 ? (spent / budget) * 100 : 0;
         
         totalBudget += budget;
         totalSpent += spent;
@@ -2009,7 +2014,7 @@ function updateBudgetSummaryDisplay() {
     
     // Add total summary
     const totalRemaining = totalBudget - totalSpent;
-    const totalPercentUsed = (totalSpent / totalBudget) * 100;
+    const totalPercentUsed = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
     
     html = `
         <div class="budget-total-summary" style="padding: 20px; background: #ecf0f1; border-radius: 8px; margin-bottom: 20px;">
