@@ -12,6 +12,29 @@ const MONTH_NAMES = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
                      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 const BAR_CHART_HEIGHT_PERCENTAGE = 85; // Reserve 15% for category labels below bars
 
+// Firebase initialization
+let useFirebase = false;
+let db = null;
+
+function initializeFirebase() {
+    try {
+        if (typeof firebase !== 'undefined' && typeof firebaseConfig !== 'undefined' && firebaseConfig.apiKey !== 'VOTRE_API_KEY') {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            useFirebase = true;
+            console.log('✅ Firebase initialisé avec succès');
+            updateSyncStatus('synced');
+        } else {
+            console.warn('⚠️ Firebase non configuré, utilisation de localStorage');
+            updateSyncStatus('local');
+        }
+    } catch (error) {
+        console.error('❌ Erreur Firebase:', error);
+        useFirebase = false;
+        updateSyncStatus('local');
+    }
+}
+
 // PIN Modal Elements
 const pinModal = document.getElementById('pinModal');
 const pinProfileSelect = document.getElementById('pinProfileSelect');
@@ -188,9 +211,9 @@ function initializeProfile() {
 }
 
 // Switch profile
-function switchProfile(newProfile) {
+async function switchProfile(newProfile) {
     // Save current transactions before switching
-    saveTransactions();
+    await saveTransactions();
     
     // Update current profile
     currentProfile = newProfile;
@@ -207,13 +230,15 @@ function switchProfile(newProfile) {
     
     showNotification(`✅ Profil ${newProfile === 'hemank' ? 'Hemank' : 'Jullian'} sélectionné`, 'success');
     
-    // Load new profile's transactions and archives
-    transactions = safeLoadFromStorage(`transactions_${currentProfile}`, []);
-    archivedMonths = safeLoadFromStorage(`archived_${currentProfile}`, []);
+    // Load new profile's data from Firebase or localStorage
+    await loadTransactions();
+    await loadArchives();
+    await loadCustomFields();
     
     // Update UI
     updateUI();
     updateHeaderProfileInfo();
+    displayCustomFieldsValues();
 }
 
 // Update header to show current profile info
@@ -353,9 +378,74 @@ expenseForm.addEventListener('submit', (e) => {
     showNotification('Dépense ajoutée avec succès !', 'success');
 });
 
-// Sauvegarder dans localStorage
-function saveTransactions() {
+// Sauvegarder dans localStorage et Firestore (hybride)
+async function saveTransactions() {
+    // Sauvegarder en localStorage (backup)
     localStorage.setItem(`transactions_${currentProfile}`, JSON.stringify(transactions));
+    
+    // Sauvegarder dans Firestore si disponible
+    if (useFirebase && db) {
+        try {
+            updateSyncStatus('syncing');
+            const batch = db.batch();
+            
+            // Supprimer les anciennes transactions
+            const oldTransactions = await db.collection('profiles')
+                .doc(currentProfile)
+                .collection('transactions')
+                .get();
+            
+            oldTransactions.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            
+            // Ajouter les nouvelles transactions
+            transactions.forEach(transaction => {
+                const docRef = db.collection('profiles')
+                    .doc(currentProfile)
+                    .collection('transactions')
+                    .doc(transaction.id.toString());
+                batch.set(docRef, transaction);
+            });
+            
+            await batch.commit();
+            console.log('✅ Transactions synchronisées avec Firebase');
+            updateSyncStatus('synced');
+        } catch (error) {
+            console.error('❌ Erreur de synchronisation Firebase:', error);
+            showNotification('⚠️ Erreur de synchronisation cloud', 'warning');
+            updateSyncStatus('local');
+        }
+    }
+}
+
+// Charger les transactions depuis Firestore ou localStorage (hybride)
+async function loadTransactions() {
+    if (useFirebase && db) {
+        try {
+            updateSyncStatus('syncing');
+            const snapshot = await db.collection('profiles')
+                .doc(currentProfile)
+                .collection('transactions')
+                .get();
+            
+            if (!snapshot.empty) {
+                transactions = snapshot.docs.map(doc => doc.data());
+                // Sauvegarder en localStorage comme backup
+                localStorage.setItem(`transactions_${currentProfile}`, JSON.stringify(transactions));
+                console.log('✅ Transactions chargées depuis Firebase');
+                updateSyncStatus('synced');
+                return transactions;
+            }
+        } catch (error) {
+            console.error('❌ Erreur de chargement Firebase:', error);
+            updateSyncStatus('local');
+        }
+    }
+    
+    // Fallback vers localStorage
+    transactions = safeLoadFromStorage(`transactions_${currentProfile}`, []);
+    return transactions;
 }
 
 // Mettre à jour l'interface
@@ -680,6 +770,26 @@ function showNotification(message, type) {
     }, 3000);
 }
 
+// Mettre à jour l'indicateur de statut de synchronisation
+function updateSyncStatus(status) {
+    const syncIndicator = document.getElementById('syncIndicator');
+    if (syncIndicator) {
+        if (status === 'synced') {
+            syncIndicator.innerHTML = '☁️ Synchronisé';
+            syncIndicator.style.color = '#27ae60';
+            syncIndicator.style.background = 'rgba(39, 174, 96, 0.1)';
+        } else if (status === 'syncing') {
+            syncIndicator.innerHTML = '🔄 Synchronisation...';
+            syncIndicator.style.color = '#f39c12';
+            syncIndicator.style.background = 'rgba(243, 156, 18, 0.1)';
+        } else {
+            syncIndicator.innerHTML = '📱 Local uniquement';
+            syncIndicator.style.color = '#95a5a6';
+            syncIndicator.style.background = '#ecf0f1';
+        }
+    }
+}
+
 // Animations CSS
 const style = document.createElement('style');
 style.textContent = `
@@ -775,18 +885,91 @@ function createArchiveFromCurrentTransactions(selectedMonth = null) {
 }
 
 // Save archive to localStorage
-function saveArchive(archive) {
+// Sauvegarder une archive (hybride localStorage + Firestore)
+async function saveArchive(archive) {
     // Remove existing archive for this month if any
     archivedMonths = archivedMonths.filter(a => a.key !== archive.key);
     archivedMonths.unshift(archive);
+    
+    // localStorage backup
     localStorage.setItem(`archived_${currentProfile}`, JSON.stringify(archivedMonths));
+    
+    // Firestore sync
+    if (useFirebase && db) {
+        try {
+            updateSyncStatus('syncing');
+            await db.collection('profiles')
+                .doc(currentProfile)
+                .collection('archived')
+                .doc(archive.key)
+                .set(archive);
+            console.log('✅ Archive synchronisée avec Firebase');
+            updateSyncStatus('synced');
+        } catch (error) {
+            console.error('❌ Erreur synchronisation archive:', error);
+            updateSyncStatus('local');
+        }
+    }
 }
 
-// Delete archive from localStorage
-function deleteArchive(key) {
+// Charger les archives depuis Firestore ou localStorage (hybride)
+async function loadArchives() {
+    if (useFirebase && db) {
+        try {
+            updateSyncStatus('syncing');
+            const snapshot = await db.collection('profiles')
+                .doc(currentProfile)
+                .collection('archived')
+                .get();
+            
+            if (!snapshot.empty) {
+                archivedMonths = snapshot.docs.map(doc => doc.data());
+                // Tri par date (plus récent en premier)
+                archivedMonths.sort((a, b) => {
+                    const dateA = new Date(a.year, a.month);
+                    const dateB = new Date(b.year, b.month);
+                    return dateB - dateA;
+                });
+                // Sauvegarder en localStorage comme backup
+                localStorage.setItem(`archived_${currentProfile}`, JSON.stringify(archivedMonths));
+                console.log('✅ Archives chargées depuis Firebase');
+                updateSyncStatus('synced');
+                return archivedMonths;
+            }
+        } catch (error) {
+            console.error('❌ Erreur de chargement des archives Firebase:', error);
+            updateSyncStatus('local');
+        }
+    }
+    
+    // Fallback vers localStorage
+    archivedMonths = safeLoadFromStorage(`archived_${currentProfile}`, []);
+    return archivedMonths;
+}
+
+// Delete archive from localStorage and Firestore
+async function deleteArchive(key) {
     if (confirm('Êtes-vous sûr de vouloir supprimer cette archive ?\n\n⚠️ Cette action est irréversible.')) {
         archivedMonths = archivedMonths.filter(a => a.key !== key);
         localStorage.setItem(`archived_${currentProfile}`, JSON.stringify(archivedMonths));
+        
+        // Supprimer de Firestore si disponible
+        if (useFirebase && db) {
+            try {
+                updateSyncStatus('syncing');
+                await db.collection('profiles')
+                    .doc(currentProfile)
+                    .collection('archived')
+                    .doc(key)
+                    .delete();
+                console.log('✅ Archive supprimée de Firebase');
+                updateSyncStatus('synced');
+            } catch (error) {
+                console.error('❌ Erreur suppression archive Firebase:', error);
+                updateSyncStatus('local');
+            }
+        }
+        
         displayArchives();
         showNotification('✅ Archive supprimée avec succès', 'success');
     }
@@ -1142,9 +1325,64 @@ addCustomFieldBtn.addEventListener('click', () => {
     showNotification('Champ ajouté avec succès', 'success');
 });
 
-function saveCustomFields() {
+// Sauvegarder les champs personnalisés (hybride localStorage + Firestore)
+async function saveCustomFields() {
+    // localStorage backup
     localStorage.setItem(`customFields_${currentProfile}`, JSON.stringify(customFields));
     localStorage.setItem(`customFieldValues_${currentProfile}`, JSON.stringify(customFieldValues));
+    
+    // Firestore sync
+    if (useFirebase && db) {
+        try {
+            updateSyncStatus('syncing');
+            await db.collection('profiles')
+                .doc(currentProfile)
+                .collection('customFields')
+                .doc('fields')
+                .set({
+                    fields: customFields,
+                    values: customFieldValues
+                });
+            console.log('✅ Champs personnalisés synchronisés');
+            updateSyncStatus('synced');
+        } catch (error) {
+            console.error('❌ Erreur synchronisation champs:', error);
+            updateSyncStatus('local');
+        }
+    }
+}
+
+// Charger les champs personnalisés depuis Firestore ou localStorage (hybride)
+async function loadCustomFields() {
+    if (useFirebase && db) {
+        try {
+            updateSyncStatus('syncing');
+            const doc = await db.collection('profiles')
+                .doc(currentProfile)
+                .collection('customFields')
+                .doc('fields')
+                .get();
+            
+            if (doc.exists) {
+                const data = doc.data();
+                customFields = data.fields || [];
+                customFieldValues = data.values || {};
+                // Sauvegarder en localStorage comme backup
+                localStorage.setItem(`customFields_${currentProfile}`, JSON.stringify(customFields));
+                localStorage.setItem(`customFieldValues_${currentProfile}`, JSON.stringify(customFieldValues));
+                console.log('✅ Champs personnalisés chargés depuis Firebase');
+                updateSyncStatus('synced');
+                return;
+            }
+        } catch (error) {
+            console.error('❌ Erreur de chargement des champs Firebase:', error);
+            updateSyncStatus('local');
+        }
+    }
+    
+    // Fallback vers localStorage
+    customFields = safeLoadFromStorage(`customFields_${currentProfile}`, []);
+    customFieldValues = safeLoadFromStorage(`customFieldValues_${currentProfile}`, {});
 }
 
 function displayCustomFieldsValues() {
@@ -1434,7 +1672,21 @@ if (exportAllArchivesBtn) {
     exportAllArchivesBtn.addEventListener('click', exportAllArchivesToExcel);
 }
 
-// Initialiser
-updateUI();
-updateMonthInfo();
-displayCustomFieldsValues();
+// Initialiser l'application
+async function initializeApp() {
+    // Initialiser Firebase
+    initializeFirebase();
+    
+    // Charger les données depuis Firebase ou localStorage
+    await loadTransactions();
+    await loadArchives();
+    await loadCustomFields();
+    
+    // Mettre à jour l'interface
+    updateUI();
+    updateMonthInfo();
+    displayCustomFieldsValues();
+}
+
+// Démarrer l'application
+initializeApp();
