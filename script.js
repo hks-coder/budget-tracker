@@ -1798,13 +1798,14 @@ function migrateAssuranceVieCategory() {
         return; // Migration already done
     }
     
-    let needsSave = false;
+    let transactionsMigrated = false;
+    let archivesMigrated = false;
     
     // Migrate transactions
     transactions.forEach(transaction => {
         if (transaction.category === 'Assurance Vie') {
             transaction.category = 'Épargne - Assurance Vie';
-            needsSave = true;
+            transactionsMigrated = true;
         }
     });
     
@@ -1814,15 +1815,21 @@ function migrateAssuranceVieCategory() {
             archive.transactions.forEach(transaction => {
                 if (transaction.category === 'Assurance Vie') {
                     transaction.category = 'Épargne - Assurance Vie';
-                    needsSave = true;
+                    archivesMigrated = true;
                 }
             });
         }
     });
     
-    if (needsSave) {
+    // Save only if changes were made
+    if (transactionsMigrated) {
         saveData();
+    }
+    if (archivesMigrated) {
         saveArchive();
+    }
+    
+    if (transactionsMigrated || archivesMigrated) {
         console.log('✅ Migration completed: Updated "Assurance Vie" to "Épargne - Assurance Vie"');
     }
     
