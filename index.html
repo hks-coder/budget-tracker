@@ -58,6 +58,10 @@
                 <h3>Dépenses</h3>
                 <p class="amount" id="totalExpense">0.00 €</p>
             </div>
+            <div class="stat-card savings">
+                <h3>Épargne</h3>
+                <p class="amount" id="totalSavings">0.00 €</p>
+            </div>
         </section>
 
         <!-- Formulaires -->
@@ -117,8 +121,6 @@
                             </optgroup>
                             <option value="Santé">⚕️ Santé</option>
                             <option value="Éducation">📚 Éducation</option>
-                            <option value="Épargne">💰 Épargne</option>
-                            <option value="Épargne - Assurance Vie">💰 Épargne - Assurance Vie</option>
                             <option value="Frais Bancaire">🏦 Frais Bancaire</option>
                             <option value="Facture">📄 Facture</option>
                             <option value="Autre">📦 Autre</option>
@@ -140,6 +142,37 @@
                     <button type="submit" class="btn btn-expense">Ajouter Dépense</button>
                 </form>
             </div>
+
+            <div class="form-container savings-form-container">
+                <h2>💰 Ajouter une Épargne</h2>
+                <form id="savingsForm">
+                    <div class="form-group">
+                        <label for="savingsAmount">Montant (€)</label>
+                        <input type="number" id="savingsAmount" step="0.01" min="0.01" max="999999999" required placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label for="savingsCategory">Catégorie</label>
+                        <select id="savingsCategory" required>
+                            <option value="">Sélectionnez une catégorie</option>
+                            <option value="Livret A">🏦 Livret A</option>
+                            <option value="PEA">📈 PEA</option>
+                            <option value="Assurance Vie">🛡️ Assurance Vie</option>
+                            <option value="Trade Republic">🌍 Trade Republic</option>
+                            <option value="Trading">📊 Trading</option>
+                            <option value="Autre">💼 Autre</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="savingsDescription">Description</label>
+                        <input type="text" id="savingsDescription" maxlength="200" required placeholder="Ex: Virement mensuel Livret A">
+                    </div>
+                    <div class="form-group">
+                        <label for="savingsDate">Date</label>
+                        <input type="date" id="savingsDate" required>
+                    </div>
+                    <button type="submit" class="btn btn-savings">Ajouter Épargne</button>
+                </form>
+            </div>
         </section>
 
         <!-- Filtres -->
@@ -150,6 +183,7 @@
                     <option value="all">Toutes les transactions</option>
                     <option value="income">Revenus uniquement</option>
                     <option value="expense">Dépenses uniquement</option>
+                    <option value="savings">Épargne uniquement</option>
                 </select>
                 <select id="filterCategory">
                     <option value="all">Toutes les catégories</option>

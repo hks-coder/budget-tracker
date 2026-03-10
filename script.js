@@ -112,10 +112,12 @@ const profileSelect = document.getElementById('profileSelect');
 const profileLockIndicator = document.getElementById('profileLockIndicator');
 const incomeForm = document.getElementById('incomeForm');
 const expenseForm = document.getElementById('expenseForm');
+const savingsForm = document.getElementById('savingsForm');
 const transactionsList = document.getElementById('transactionsList');
 const totalBalance = document.getElementById('totalBalance');
 const totalIncome = document.getElementById('totalIncome');
 const totalExpense = document.getElementById('totalExpense');
+const totalSavings = document.getElementById('totalSavings');
 const filterType = document.getElementById('filterType');
 const filterCategory = document.getElementById('filterCategory');
 const clearAllBtn = document.getElementById('clearAll');
@@ -126,6 +128,7 @@ const customCategory = document.getElementById('customCategory');
 // Initialiser la date d'aujourd'hui
 document.getElementById('incomeDate').valueAsDate = new Date();
 document.getElementById('expenseDate').valueAsDate = new Date();
+document.getElementById('savingsDate').valueAsDate = new Date();
 
 // Handle custom category selection
 expenseCategory.addEventListener('change', (e) => {
@@ -437,6 +440,71 @@ expenseForm.addEventListener('submit', async (e) => {
     }
 });
 
+// Ajouter une épargne
+savingsForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const amount = parseFloat(document.getElementById('savingsAmount').value);
+    const category = document.getElementById('savingsCategory').value;
+    const description = document.getElementById('savingsDescription').value.trim();
+    const date = document.getElementById('savingsDate').value;
+
+    // Input validation
+    if (isNaN(amount) || amount <= 0) {
+        showNotification('⚠️ Veuillez entrer un montant valide (supérieur à 0)', 'warning');
+        return;
+    }
+
+    if (amount > 999999999) {
+        showNotification('⚠️ Le montant est trop élevé', 'warning');
+        return;
+    }
+
+    if (!category) {
+        showNotification('⚠️ Veuillez sélectionner une catégorie', 'warning');
+        return;
+    }
+
+    if (!description) {
+        showNotification('⚠️ Veuillez entrer une description', 'warning');
+        return;
+    }
+
+    if (description.length > 200) {
+        showNotification('⚠️ La description est trop longue (maximum 200 caractères)', 'warning');
+        return;
+    }
+
+    if (!date) {
+        showNotification('⚠️ Veuillez sélectionner une date', 'warning');
+        return;
+    }
+
+    // All validation passed, show loading state
+    const submitBtn = savingsForm.querySelector('button[type="submit"]');
+    setButtonLoading(submitBtn, true);
+
+    try {
+        const transaction = {
+            id: Date.now(),
+            type: 'savings',
+            amount: amount,
+            category: category,
+            description: description,
+            date: date
+        };
+
+        transactions.push(transaction);
+        await saveTransactions();
+        savingsForm.reset();
+        document.getElementById('savingsDate').valueAsDate = new Date();
+        updateUI();
+        showNotification('✅ Épargne ajoutée avec succès !', 'success');
+    } finally {
+        setButtonLoading(submitBtn, false);
+    }
+});
+
 // Sauvegarder dans localStorage et Firestore (hybride)
 async function saveTransactions() {
     // Sauvegarder en localStorage (backup)
@@ -577,10 +645,15 @@ function updateSummary() {
         .filter(t => t.type === 'expense')
         .reduce((sum, t) => sum + t.amount, 0);
     
-    const balance = income - expense;
+    const savings = transactions
+        .filter(t => t.type === 'savings')
+        .reduce((sum, t) => sum + t.amount, 0);
+    
+    const balance = income - expense - savings;
     
     totalIncome.textContent = formatCurrency(income);
     totalExpense.textContent = formatCurrency(expense);
+    totalSavings.textContent = formatCurrency(savings);
     totalBalance.textContent = formatCurrency(balance);
 }
 
@@ -641,7 +714,8 @@ function displayTransactions() {
         // Transaction amount
         const amountDiv = document.createElement('div');
         amountDiv.className = 'transaction-amount';
-        amountDiv.textContent = `${transaction.type === 'income' ? '+' : '-'}${formatCurrency(transaction.amount)}`;
+        const prefix = transaction.type === 'income' ? '+' : transaction.type === 'savings' ? '💰' : '-';
+        amountDiv.textContent = `${prefix}${formatCurrency(transaction.amount)}`;
         
         // Delete button
         const deleteBtn = document.createElement('button');
