@@ -347,6 +347,10 @@ header p {
     background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
 }
 
+.stat-card.savings {
+    background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
+}
+
 /* Section des formulaires */
 .forms-section {
     display: grid;
@@ -368,6 +372,10 @@ header p {
     font-size: 1.5em;
     border-bottom: 2px solid #667eea;
     padding-bottom: 10px;
+}
+
+.savings-form-container h2 {
+    border-bottom-color: #f7971e;
 }
 
 .form-group {
@@ -445,6 +453,16 @@ header p {
 .btn-expense:hover {
     transform: translateY(-2px);
     box-shadow: 0 5px 15px rgba(235, 51, 73, 0.4);
+}
+
+.btn-savings {
+    background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
+    color: white;
+}
+
+.btn-savings:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(247, 151, 30, 0.4);
 }
 
 .btn-clear {
@@ -548,6 +566,10 @@ header p {
     border-left-color: #f45c43;
 }
 
+.transaction-item.savings {
+    border-left-color: #ffd200;
+}
+
 .transaction-info {
     flex: 1;
 }
@@ -575,6 +597,10 @@ header p {
 
 .transaction-item.expense .transaction-amount {
     color: #eb3349;
+}
+
+.transaction-item.savings .transaction-amount {
+    color: #f7971e;
 }
 
 .delete-btn {
