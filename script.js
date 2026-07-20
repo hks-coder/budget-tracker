@@ -817,8 +817,8 @@ function updateExpenseChart() {
         });
     
     // Soustraire les crédits du total de chaque catégorie.
-    // Credits only reduce existing expense categories; credits for categories
-    // with no expenses are intentionally ignored (net balance is already positive).
+    // Les crédits réduisent uniquement les catégories ayant des dépenses existantes.
+    // Les crédits sans dépense correspondante sont ignorés volontairement (solde net déjà positif).
     transactions
         .filter(t => t.type === 'credit')
         .forEach(t => {
