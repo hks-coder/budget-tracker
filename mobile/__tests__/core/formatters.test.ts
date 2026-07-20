@@ -119,6 +119,10 @@ describe('formatTransactionType', () => {
   it('returns Épargne for savings', () => {
     expect(formatTransactionType('savings')).toBe('Épargne');
   });
+
+  it('returns Crédit for credit', () => {
+    expect(formatTransactionType('credit')).toBe('Crédit');
+  });
 });
 
 describe('todayISO', () => {

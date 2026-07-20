@@ -413,6 +413,9 @@ expenseForm.addEventListener('submit', async (e) => {
         return;
     }
     
+    const expenseTypeEl = document.querySelector('input[name="expenseType"]:checked');
+    const transactionType = expenseTypeEl ? expenseTypeEl.value : 'expense';
+    
     // All validation passed, show loading state
     const submitBtn = expenseForm.querySelector('button[type="submit"]');
     setButtonLoading(submitBtn, true);
@@ -420,7 +423,7 @@ expenseForm.addEventListener('submit', async (e) => {
     try {
         const transaction = {
             id: Date.now(),
-            type: 'expense',
+            type: transactionType,
             amount: amount,
             category: categoryValue,
             description: description,
@@ -645,11 +648,15 @@ function updateSummary() {
         .filter(t => t.type === 'expense')
         .reduce((sum, t) => sum + t.amount, 0);
     
+    const credit = transactions
+        .filter(t => t.type === 'credit')
+        .reduce((sum, t) => sum + t.amount, 0);
+    
     const savings = transactions
         .filter(t => t.type === 'savings')
         .reduce((sum, t) => sum + t.amount, 0);
     
-    const balance = income - expense - savings;
+    const balance = income + credit - expense - savings;
     
     totalIncome.textContent = formatCurrency(income);
     totalExpense.textContent = formatCurrency(expense);
@@ -714,7 +721,8 @@ function displayTransactions() {
         // Transaction amount
         const amountDiv = document.createElement('div');
         amountDiv.className = 'transaction-amount';
-        const prefix = transaction.type === 'income' ? '+' : transaction.type === 'savings' ? '💰' : '-';
+        const amountPrefixes = { income: '+', savings: '💰', credit: '+', expense: '-' };
+        const prefix = amountPrefixes[transaction.type] ?? '-';
         amountDiv.textContent = `${prefix}${formatCurrency(transaction.amount)}`;
         
         // Delete button
@@ -796,7 +804,7 @@ function updateExpenseChart() {
     const chartSection = document.querySelector('.chart-section');
     if (!chartSection) return;
     
-    // Calculer les dépenses par catégorie
+    // Calculer les dépenses par catégorie (nettes des crédits)
     const expensesByCategory = {};
     transactions
         .filter(t => t.type === 'expense')
@@ -805,6 +813,20 @@ function updateExpenseChart() {
                 expensesByCategory[t.category] += t.amount;
             } else {
                 expensesByCategory[t.category] = t.amount;
+            }
+        });
+    
+    // Soustraire les crédits du total de chaque catégorie.
+    // Les crédits réduisent uniquement les catégories ayant des dépenses existantes.
+    // Les crédits sans dépense correspondante sont ignorés volontairement (solde net déjà positif).
+    transactions
+        .filter(t => t.type === 'credit')
+        .forEach(t => {
+            if (expensesByCategory[t.category]) {
+                expensesByCategory[t.category] -= t.amount;
+                if (expensesByCategory[t.category] <= 0) {
+                    delete expensesByCategory[t.category];
+                }
             }
         });
     

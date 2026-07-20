@@ -72,6 +72,11 @@ describe('validateTransaction', () => {
       expect(result.valid).toBe(true);
     });
 
+    it('accepts credit', () => {
+      const result = validateTransaction({ ...validInput, type: 'credit' });
+      expect(result.valid).toBe(true);
+    });
+
     it('rejects invalid type', () => {
       const result = validateTransaction({ ...validInput, type: 'invalid' as never });
       expect(result.valid).toBe(false);

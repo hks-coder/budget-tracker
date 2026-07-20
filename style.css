@@ -455,6 +455,28 @@ header p {
     box-shadow: 0 5px 15px rgba(235, 51, 73, 0.4);
 }
 
+.toggle-group {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.toggle-option {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: 0.95em;
+    color: #555;
+}
+
+.toggle-option input[type="radio"] {
+    accent-color: #e67e22;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
 .btn-savings {
     background: linear-gradient(135deg, #f7971e 0%, #ffd200 100%);
     color: white;
@@ -570,6 +592,10 @@ header p {
     border-left-color: #ffd200;
 }
 
+.transaction-item.credit {
+    border-left-color: #e67e22;
+}
+
 .transaction-info {
     flex: 1;
 }
@@ -601,6 +627,10 @@ header p {
 
 .transaction-item.savings .transaction-amount {
     color: #f7971e;
+}
+
+.transaction-item.credit .transaction-amount {
+    color: #e67e22;
 }
 
 .delete-btn {
