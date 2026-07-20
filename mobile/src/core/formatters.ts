@@ -63,6 +63,8 @@ export function formatTransactionType(type: TransactionType): string {
       return 'Dépense';
     case 'savings':
       return 'Épargne';
+    case 'credit':
+      return 'Crédit';
   }
 }
 

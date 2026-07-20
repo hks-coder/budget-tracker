@@ -16,7 +16,7 @@ export function validateTransaction(input: TransactionInput): ValidationResult {
   }
 
   // Type validation
-  const validTypes = ['income', 'expense', 'savings'];
+  const validTypes = ['income', 'expense', 'savings', 'credit'];
   if (!input.type || !validTypes.includes(input.type)) {
     errors.push({ field: 'type', message: 'Le type de transaction est invalide.' });
   }

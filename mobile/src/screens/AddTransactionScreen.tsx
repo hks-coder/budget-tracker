@@ -29,6 +29,7 @@ const TYPE_OPTIONS: { label: string; value: TransactionType; emoji: string }[] =
   { label: 'Dépense', value: 'expense', emoji: '↓' },
   { label: 'Revenu', value: 'income', emoji: '↑' },
   { label: 'Épargne', value: 'savings', emoji: '🏦' },
+  { label: 'Crédit', value: 'credit', emoji: '↩️' },
 ];
 
 function getTypeColor(type: TransactionType): string {
@@ -36,6 +37,7 @@ function getTypeColor(type: TransactionType): string {
     case 'income': return Colors.income;
     case 'expense': return Colors.expense;
     case 'savings': return Colors.savings;
+    case 'credit': return Colors.credit;
   }
 }
 
@@ -108,6 +110,8 @@ export function AddTransactionScreen({
         ? SETTINGS_KEYS.LAST_INCOME_CATEGORY
         : type === 'expense'
         ? SETTINGS_KEYS.LAST_EXPENSE_CATEGORY
+        : type === 'credit'
+        ? SETTINGS_KEYS.LAST_CREDIT_CATEGORY
         : SETTINGS_KEYS.LAST_SAVINGS_CATEGORY;
       await setSetting(catKey, category);
 
@@ -220,7 +224,7 @@ export function AddTransactionScreen({
             <Text style={styles.sectionLabel}>Description *</Text>
             <TextInput
               style={[styles.input, errors.description ? styles.inputError : null]}
-              placeholder={`Ex: ${type === 'expense' ? 'Courses Carrefour' : type === 'income' ? 'Salaire janvier' : 'Virement Livret A'}`}
+              placeholder={`Ex: ${type === 'expense' ? 'Courses Carrefour' : type === 'income' ? 'Salaire janvier' : type === 'credit' ? 'Remboursement achat' : 'Virement Livret A'}`}
               placeholderTextColor={Colors.textLight}
               value={description}
               onChangeText={setDescription}

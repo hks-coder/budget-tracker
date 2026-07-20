@@ -97,6 +97,7 @@ export function computeTotals(transactions: Transaction[]): MonthlyTotals {
     if (t.type === 'income') income += t.amount;
     else if (t.type === 'expense') expense += t.amount;
     else if (t.type === 'savings') savings += t.amount;
+    else if (t.type === 'credit') income += t.amount;
   }
 
   return {

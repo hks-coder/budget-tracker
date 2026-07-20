@@ -8,6 +8,7 @@ export const Colors = {
   income: '#27ae60',
   expense: '#e74c3c',
   savings: '#3498db',
+  credit: '#e67e22',
 
   // UI
   background: '#f5f5f5',
@@ -58,4 +59,5 @@ export const SETTINGS_KEYS = {
   LAST_EXPENSE_CATEGORY: 'last_expense_category',
   LAST_INCOME_CATEGORY: 'last_income_category',
   LAST_SAVINGS_CATEGORY: 'last_savings_category',
+  LAST_CREDIT_CATEGORY: 'last_credit_category',
 } as const;

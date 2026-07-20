@@ -85,6 +85,7 @@ function typeIcon(type: Transaction['type']): string {
     case 'income': return '↑';
     case 'expense': return '↓';
     case 'savings': return '🏦';
+    case 'credit': return '↩️';
   }
 }
 
@@ -93,6 +94,7 @@ function getTypeColor(type: Transaction['type']): string {
     case 'income': return Colors.income;
     case 'expense': return Colors.expense;
     case 'savings': return Colors.savings;
+    case 'credit': return Colors.credit;
   }
 }
 

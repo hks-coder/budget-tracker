@@ -136,6 +136,19 @@
                         <input type="text" id="expenseDescription" maxlength="200" required placeholder="Ex: Courses Carrefour">
                     </div>
                     <div class="form-group">
+                        <label>Type de transaction</label>
+                        <div class="toggle-group">
+                            <label class="toggle-option">
+                                <input type="radio" name="expenseType" id="expenseTypeDebit" value="expense" checked>
+                                <span>➖ Débit</span>
+                            </label>
+                            <label class="toggle-option">
+                                <input type="radio" name="expenseType" id="expenseTypeCredit" value="credit">
+                                <span>↩️ Crédit (remboursement)</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-group">
                         <label for="expenseDate">Date</label>
                         <input type="date" id="expenseDate" required>
                     </div>
@@ -183,6 +196,7 @@
                     <option value="all">Toutes les transactions</option>
                     <option value="income">Revenus uniquement</option>
                     <option value="expense">Dépenses uniquement</option>
+                    <option value="credit">Crédits uniquement</option>
                     <option value="savings">Épargne uniquement</option>
                 </select>
                 <select id="filterCategory">
