@@ -721,7 +721,8 @@ function displayTransactions() {
         // Transaction amount
         const amountDiv = document.createElement('div');
         amountDiv.className = 'transaction-amount';
-        const prefix = transaction.type === 'income' ? '+' : transaction.type === 'savings' ? '💰' : transaction.type === 'credit' ? '+' : '-';
+        const amountPrefixes = { income: '+', savings: '💰', credit: '+', expense: '-' };
+        const prefix = amountPrefixes[transaction.type] ?? '-';
         amountDiv.textContent = `${prefix}${formatCurrency(transaction.amount)}`;
         
         // Delete button
@@ -815,7 +816,9 @@ function updateExpenseChart() {
             }
         });
     
-    // Soustraire les crédits du total de chaque catégorie
+    // Soustraire les crédits du total de chaque catégorie.
+    // Credits only reduce existing expense categories; credits for categories
+    // with no expenses are intentionally ignored (net balance is already positive).
     transactions
         .filter(t => t.type === 'credit')
         .forEach(t => {
