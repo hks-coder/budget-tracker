@@ -121,6 +121,7 @@ export function isTransactionType(value: string): value is TransactionType {
   return (TRANSACTION_TYPES as readonly string[]).includes(value);
 }
 
+/** Normalizes legacy transaction types and returns null for unsupported values. */
 export function normalizeTransactionType(value: string | null | undefined): TransactionType | null {
   if (!value) return null;
 

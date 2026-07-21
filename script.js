@@ -11,6 +11,7 @@ const PIN_CODES = {
 const MONTH_NAMES = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
                      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
 const BAR_CHART_HEIGHT_PERCENTAGE = 85; // Reserve 15% for category labels below bars
+const VALID_TRANSACTION_TYPES = new Set(['income', 'expense', 'savings']);
 
 // Performance Utilities
 
@@ -102,10 +103,22 @@ function safeLoadFromStorage(key, defaultValue = []) {
     }
 }
 
+/**
+ * Normalizes legacy or invalid transaction types to the current supported set.
+ * Legacy `credit` entries are now treated as standard expenses.
+ * @param {string | null | undefined} type - The stored transaction type
+ * @returns {'income' | 'expense' | 'savings'} A supported transaction type
+ */
 function normalizeTransactionType(type) {
-    return type === 'credit' ? 'expense' : type;
+    const normalizedType = type === 'credit' ? 'expense' : type;
+    return VALID_TRANSACTION_TYPES.has(normalizedType) ? normalizedType : 'expense';
 }
 
+/**
+ * Normalizes a single transaction by converting legacy `credit` types to `expense`.
+ * @param {Object} transaction - The transaction to normalize
+ * @returns {Object} The normalized transaction
+ */
 function normalizeTransaction(transaction) {
     if (!transaction || typeof transaction !== 'object') {
         return transaction;
@@ -121,6 +134,12 @@ function normalizeTransactions(items = []) {
     return Array.isArray(items) ? items.map(normalizeTransaction) : [];
 }
 
+/**
+ * Normalizes an archived month by migrating its transactions to supported types
+ * and recalculating the archived summary from the normalized data.
+ * @param {Object} archive - The archived month payload
+ * @returns {Object} The normalized archive
+ */
 function normalizeArchive(archive) {
     if (!archive || typeof archive !== 'object') {
         return archive;
