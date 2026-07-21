@@ -60,8 +60,9 @@ export function AddTransactionScreen({
     if (isEditing) return;
     (async () => {
       const storedLastType = await getSetting(SETTINGS_KEYS.LAST_TYPE);
-      const lastType = storedLastType && isTransactionType(storedLastType)
-        ? storedLastType
+      const normalizedLastType = storedLastType === 'credit' ? 'expense' : storedLastType;
+      const lastType = normalizedLastType && isTransactionType(normalizedLastType)
+        ? normalizedLastType
         : null;
       if (lastType) setType(lastType);
 

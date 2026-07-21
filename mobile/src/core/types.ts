@@ -83,8 +83,8 @@ export interface CategoryBudget {
 export const EXPENSE_CATEGORIES = [
   'Courses',
   'Appartement',
-  'credit de voiture',
-  'credit immobilier',
+  'Crédit de voiture',
+  'Crédit immobilier',
   'Appartement > Box',
   'Appartement > SFR',
   'Shopping',

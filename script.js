@@ -2003,7 +2003,7 @@ function populateBudgetCategoryDropdown() {
     
     // Add default categories first
     const defaultCategories = [
-        'Courses', 'Appartement', 'credit de voiture', 'credit immobilier', 'Shopping', 'Transport', 'Loisirs', 
+        'Courses', 'Appartement', 'Crédit de voiture', 'Crédit immobilier', 'Shopping', 'Transport', 'Loisirs', 
         'Santé', 'Restaurant', 'Éducation', 'Épargne', 'Assurance Vie', 
         'Frais Bancaire', 'Autre'
     ];

@@ -6,13 +6,13 @@ import {
 
 describe('expense categories', () => {
   it('includes the loan-related categories', () => {
-    expect(EXPENSE_CATEGORIES).toContain('credit de voiture');
-    expect(EXPENSE_CATEGORIES).toContain('credit immobilier');
+    expect(EXPENSE_CATEGORIES).toContain('Crédit de voiture');
+    expect(EXPENSE_CATEGORIES).toContain('Crédit immobilier');
   });
 
   it('returns the expense categories for expense transactions', () => {
-    expect(getCategoriesForType('expense')).toContain('credit de voiture');
-    expect(getCategoriesForType('expense')).toContain('credit immobilier');
+    expect(getCategoriesForType('expense')).toContain('Crédit de voiture');
+    expect(getCategoriesForType('expense')).toContain('Crédit immobilier');
   });
 });
 
