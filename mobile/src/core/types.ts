@@ -121,6 +121,13 @@ export function isTransactionType(value: string): value is TransactionType {
   return (TRANSACTION_TYPES as readonly string[]).includes(value);
 }
 
+export function normalizeTransactionType(value: string | null | undefined): TransactionType | null {
+  if (!value) return null;
+
+  const normalized = value === 'credit' ? 'expense' : value;
+  return isTransactionType(normalized) ? normalized : null;
+}
+
 export function getCategoriesForType(type: TransactionType): readonly string[] {
   switch (type) {
     case 'income':

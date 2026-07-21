@@ -2,6 +2,7 @@ import {
   EXPENSE_CATEGORIES,
   getCategoriesForType,
   isTransactionType,
+  normalizeTransactionType,
 } from '../../src/core/types';
 
 describe('expense categories', () => {
@@ -19,5 +20,11 @@ describe('expense categories', () => {
 describe('isTransactionType', () => {
   it('rejects legacy credit values', () => {
     expect(isTransactionType('credit')).toBe(false);
+  });
+});
+
+describe('normalizeTransactionType', () => {
+  it('maps legacy credit to expense', () => {
+    expect(normalizeTransactionType('credit')).toBe('expense');
   });
 });

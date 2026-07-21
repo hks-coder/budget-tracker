@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, BorderRadius, FontSize } from '../constants/theme';
 import { validateTransaction } from '../core/validation';
 import { todayISO } from '../core/formatters';
-import { getCategoriesForType, isTransactionType } from '../core/types';
+import { getCategoriesForType, normalizeTransactionType } from '../core/types';
 import { getSetting, setSetting } from '../data/transactionRepository';
 import { SETTINGS_KEYS } from '../constants/theme';
 import type { Transaction, TransactionInput, TransactionType } from '../core/types';
@@ -60,14 +60,15 @@ export function AddTransactionScreen({
     if (isEditing) return;
     (async () => {
       const storedLastType = await getSetting(SETTINGS_KEYS.LAST_TYPE);
-      const lastType = storedLastType === 'credit' ? 'expense' : storedLastType;
-      if (lastType && isTransactionType(lastType)) setType(lastType);
+      const lastType = normalizeTransactionType(storedLastType);
+      if (lastType) setType(lastType);
 
-      const lastCatKey = lastType === 'income'
-        ? SETTINGS_KEYS.LAST_INCOME_CATEGORY
-        : lastType === 'savings'
-        ? SETTINGS_KEYS.LAST_SAVINGS_CATEGORY
-        : SETTINGS_KEYS.LAST_EXPENSE_CATEGORY;
+      let lastCatKey = SETTINGS_KEYS.LAST_EXPENSE_CATEGORY;
+      if (lastType === 'income') {
+        lastCatKey = SETTINGS_KEYS.LAST_INCOME_CATEGORY;
+      } else if (lastType === 'savings') {
+        lastCatKey = SETTINGS_KEYS.LAST_SAVINGS_CATEGORY;
+      }
       const lastCat = await getSetting(lastCatKey);
       if (lastCat) setCategory(lastCat);
     })();
