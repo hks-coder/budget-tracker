@@ -102,9 +102,58 @@ function safeLoadFromStorage(key, defaultValue = []) {
     }
 }
 
+function normalizeTransactionType(type) {
+    return type === 'credit' ? 'expense' : type;
+}
+
+function normalizeTransaction(transaction) {
+    if (!transaction || typeof transaction !== 'object') {
+        return transaction;
+    }
+
+    return {
+        ...transaction,
+        type: normalizeTransactionType(transaction.type)
+    };
+}
+
+function normalizeTransactions(items = []) {
+    return Array.isArray(items) ? items.map(normalizeTransaction) : [];
+}
+
+function normalizeArchive(archive) {
+    if (!archive || typeof archive !== 'object') {
+        return archive;
+    }
+
+    const normalizedTransactions = normalizeTransactions(archive.transactions);
+    const income = normalizedTransactions
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum + t.amount, 0);
+    const expense = normalizedTransactions
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum + t.amount, 0);
+
+    return {
+        ...archive,
+        transactions: normalizedTransactions,
+        summary: {
+            ...archive.summary,
+            income,
+            expense,
+            balance: income - expense,
+            transactionCount: normalizedTransactions.length
+        }
+    };
+}
+
+function normalizeArchives(items = []) {
+    return Array.isArray(items) ? items.map(normalizeArchive) : [];
+}
+
 // Données
-let transactions = safeLoadFromStorage(`transactions_${currentProfile}`, []);
-let archivedMonths = safeLoadFromStorage(`archived_${currentProfile}`, []);
+let transactions = normalizeTransactions(safeLoadFromStorage(`transactions_${currentProfile}`, []));
+let archivedMonths = normalizeArchives(safeLoadFromStorage(`archived_${currentProfile}`, []));
 let categoryBudgets = safeLoadFromStorage(`categoryBudgets_${currentProfile}`, {});
 
 // Éléments du DOM
@@ -413,9 +462,6 @@ expenseForm.addEventListener('submit', async (e) => {
         return;
     }
     
-    const expenseTypeEl = document.querySelector('input[name="expenseType"]:checked');
-    const transactionType = expenseTypeEl ? expenseTypeEl.value : 'expense';
-    
     // All validation passed, show loading state
     const submitBtn = expenseForm.querySelector('button[type="submit"]');
     setButtonLoading(submitBtn, true);
@@ -423,7 +469,7 @@ expenseForm.addEventListener('submit', async (e) => {
     try {
         const transaction = {
             id: Date.now(),
-            type: transactionType,
+            type: 'expense',
             amount: amount,
             category: categoryValue,
             description: description,
@@ -510,6 +556,8 @@ savingsForm.addEventListener('submit', async (e) => {
 
 // Sauvegarder dans localStorage et Firestore (hybride)
 async function saveTransactions() {
+    transactions = normalizeTransactions(transactions);
+
     // Sauvegarder en localStorage (backup)
     localStorage.setItem(`transactions_${currentProfile}`, JSON.stringify(transactions));
     
@@ -563,7 +611,7 @@ async function loadTransactions() {
                 .get();
             
             if (!snapshot.empty) {
-                transactions = snapshot.docs.map(doc => doc.data());
+                transactions = normalizeTransactions(snapshot.docs.map(doc => doc.data()));
                 // Sauvegarder en localStorage comme backup
                 localStorage.setItem(`transactions_${currentProfile}`, JSON.stringify(transactions));
                 console.log('✅ Transactions chargées depuis Firebase');
@@ -577,7 +625,7 @@ async function loadTransactions() {
     }
     
     // Fallback vers localStorage
-    transactions = safeLoadFromStorage(`transactions_${currentProfile}`, []);
+    transactions = normalizeTransactions(safeLoadFromStorage(`transactions_${currentProfile}`, []));
     return transactions;
 }
 
@@ -648,15 +696,11 @@ function updateSummary() {
         .filter(t => t.type === 'expense')
         .reduce((sum, t) => sum + t.amount, 0);
     
-    const credit = transactions
-        .filter(t => t.type === 'credit')
-        .reduce((sum, t) => sum + t.amount, 0);
-    
     const savings = transactions
         .filter(t => t.type === 'savings')
         .reduce((sum, t) => sum + t.amount, 0);
     
-    const balance = income + credit - expense - savings;
+    const balance = income - expense - savings;
     
     totalIncome.textContent = formatCurrency(income);
     totalExpense.textContent = formatCurrency(expense);
@@ -721,7 +765,7 @@ function displayTransactions() {
         // Transaction amount
         const amountDiv = document.createElement('div');
         amountDiv.className = 'transaction-amount';
-        const amountPrefixes = { income: '+', savings: '💰', credit: '+', expense: '-' };
+        const amountPrefixes = { income: '+', savings: '💰', expense: '-' };
         const prefix = amountPrefixes[transaction.type] ?? '-';
         amountDiv.textContent = `${prefix}${formatCurrency(transaction.amount)}`;
         
@@ -804,7 +848,7 @@ function updateExpenseChart() {
     const chartSection = document.querySelector('.chart-section');
     if (!chartSection) return;
     
-    // Calculer les dépenses par catégorie (nettes des crédits)
+    // Calculer les dépenses par catégorie
     const expensesByCategory = {};
     transactions
         .filter(t => t.type === 'expense')
@@ -815,21 +859,6 @@ function updateExpenseChart() {
                 expensesByCategory[t.category] = t.amount;
             }
         });
-    
-    // Soustraire les crédits du total de chaque catégorie.
-    // Les crédits réduisent uniquement les catégories ayant des dépenses existantes.
-    // Les crédits sans dépense correspondante sont ignorés volontairement (solde net déjà positif).
-    transactions
-        .filter(t => t.type === 'credit')
-        .forEach(t => {
-            if (expensesByCategory[t.category]) {
-                expensesByCategory[t.category] -= t.amount;
-                if (expensesByCategory[t.category] <= 0) {
-                    delete expensesByCategory[t.category];
-                }
-            }
-        });
-    
     const categories = Object.keys(expensesByCategory);
     const totalExpenses = Object.values(expensesByCategory).reduce((a, b) => a + b, 0);
     
@@ -1154,7 +1183,7 @@ async function loadArchives() {
                 .get();
             
             if (!snapshot.empty) {
-                archivedMonths = snapshot.docs.map(doc => doc.data());
+                archivedMonths = normalizeArchives(snapshot.docs.map(doc => doc.data()));
                 // Tri par date (plus récent en premier)
                 archivedMonths.sort((a, b) => {
                     const dateA = new Date(a.year, a.month);
@@ -1174,7 +1203,7 @@ async function loadArchives() {
     }
     
     // Fallback vers localStorage
-    archivedMonths = safeLoadFromStorage(`archived_${currentProfile}`, []);
+    archivedMonths = normalizeArchives(safeLoadFromStorage(`archived_${currentProfile}`, []));
     return archivedMonths;
 }
 
@@ -1974,7 +2003,7 @@ function populateBudgetCategoryDropdown() {
     
     // Add default categories first
     const defaultCategories = [
-        'Courses', 'Appartement', 'Shopping', 'Transport', 'Loisirs', 
+        'Courses', 'Appartement', 'credit de voiture', 'credit immobilier', 'Shopping', 'Transport', 'Loisirs', 
         'Santé', 'Restaurant', 'Éducation', 'Épargne', 'Assurance Vie', 
         'Frais Bancaire', 'Autre'
     ];
@@ -2235,8 +2264,8 @@ function importProfileData() {
                 }
                 
                 // Import the data with proper defaults
-                transactions = importedData.transactions;
-                archivedMonths = importedData.archivedMonths;
+                transactions = normalizeTransactions(importedData.transactions);
+                archivedMonths = normalizeArchives(importedData.archivedMonths);
                 customFields = Array.isArray(importedData.customFields) ? importedData.customFields : [];
                 customFieldValues = (importedData.customFieldValues && 
                                     typeof importedData.customFieldValues === 'object' && 

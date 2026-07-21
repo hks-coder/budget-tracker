@@ -1,3 +1,4 @@
+import { isTransactionType } from './types';
 import type { TransactionInput, ValidationResult } from './types';
 
 /** Validates a TransactionInput, returning errors if any */
@@ -16,8 +17,7 @@ export function validateTransaction(input: TransactionInput): ValidationResult {
   }
 
   // Type validation
-  const validTypes = ['income', 'expense', 'savings', 'credit'];
-  if (!input.type || !validTypes.includes(input.type)) {
+  if (!input.type || !isTransactionType(input.type)) {
     errors.push({ field: 'type', message: 'Le type de transaction est invalide.' });
   }
 

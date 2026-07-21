@@ -63,30 +63,17 @@ describe('computeTotals', () => {
     expect(totals.balance).toBe(500);
   });
 
-  it('adds credit amount to balance without affecting income', () => {
-    const transactions = [
-      makeTransaction({ type: 'income', amount: 1000 }),
-      makeTransaction({ type: 'expense', amount: 300 }),
-      makeTransaction({ type: 'credit', amount: 50 }),
-    ];
-    const totals = computeTotals(transactions);
-    expect(totals.income).toBe(1000);
-    expect(totals.expense).toBe(300);
-    expect(totals.balance).toBe(1000 + 50 - 300); // 750
-  });
-
-  it('correctly handles mixed income, expense, savings and credit', () => {
+  it('correctly handles mixed income, expense and savings', () => {
     const transactions = [
       makeTransaction({ type: 'income', amount: 2000 }),
       makeTransaction({ type: 'expense', amount: 800 }),
       makeTransaction({ type: 'savings', amount: 400 }),
-      makeTransaction({ type: 'credit', amount: 100 }),
     ];
     const totals = computeTotals(transactions);
     expect(totals.income).toBe(2000);
     expect(totals.expense).toBe(800);
     expect(totals.savings).toBe(400);
-    expect(totals.balance).toBe(2000 + 100 - 800 - 400); // 900
+    expect(totals.balance).toBe(2000 - 800 - 400); // 800
   });
 });
 

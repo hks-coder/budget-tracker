@@ -592,10 +592,6 @@ header p {
     border-left-color: #ffd200;
 }
 
-.transaction-item.credit {
-    border-left-color: #e67e22;
-}
-
 .transaction-info {
     flex: 1;
 }
@@ -627,10 +623,6 @@ header p {
 
 .transaction-item.savings .transaction-amount {
     color: #f7971e;
-}
-
-.transaction-item.credit .transaction-amount {
-    color: #e67e22;
 }
 
 .delete-btn {

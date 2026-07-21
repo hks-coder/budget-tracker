@@ -1,6 +1,8 @@
 // Core types for Budget Tracker mobile app
 
-export type TransactionType = 'income' | 'expense' | 'savings' | 'credit';
+export const TRANSACTION_TYPES = ['income', 'expense', 'savings'] as const;
+
+export type TransactionType = (typeof TRANSACTION_TYPES)[number];
 
 export interface Transaction {
   id: string;
@@ -81,6 +83,8 @@ export interface CategoryBudget {
 export const EXPENSE_CATEGORIES = [
   'Courses',
   'Appartement',
+  'credit de voiture',
+  'credit immobilier',
   'Appartement > Box',
   'Appartement > SFR',
   'Shopping',
@@ -113,6 +117,10 @@ export const SAVINGS_CATEGORIES = [
   'Autre',
 ] as const;
 
+export function isTransactionType(value: string): value is TransactionType {
+  return (TRANSACTION_TYPES as readonly string[]).includes(value);
+}
+
 export function getCategoriesForType(type: TransactionType): readonly string[] {
   switch (type) {
     case 'income':
@@ -121,7 +129,5 @@ export function getCategoriesForType(type: TransactionType): readonly string[] {
       return EXPENSE_CATEGORIES;
     case 'savings':
       return SAVINGS_CATEGORIES;
-    case 'credit':
-      return EXPENSE_CATEGORIES;
   }
 }

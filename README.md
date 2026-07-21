@@ -126,7 +126,7 @@ interface Transaction {
 
 ### Catégories disponibles
 
-**Dépenses** : Courses, Appartement, Appartement > Box, Appartement > SFR, Shopping, Transport, Loisirs, Loisirs > Restaurant, Santé, Éducation, Frais Bancaire, Facture, Autre
+**Dépenses** : Courses, Appartement, credit de voiture, credit immobilier, Appartement > Box, Appartement > SFR, Shopping, Transport, Loisirs, Loisirs > Restaurant, Santé, Éducation, Frais Bancaire, Facture, Autre
 
 **Revenus** : Salaire, Freelance, Investissement, Cadeau, Autre
 
