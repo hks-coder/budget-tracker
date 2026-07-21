@@ -62,14 +62,17 @@ export function AddTransactionScreen({
       const storedLastType = await getSetting(SETTINGS_KEYS.LAST_TYPE);
       const lastType = typeof storedLastType === 'string'
         ? normalizeTransactionType(storedLastType)
-        : null;
-      if (lastType) setType(lastType);
+        : 'expense';
+      setType(lastType);
 
       let lastCatKey = SETTINGS_KEYS.LAST_EXPENSE_CATEGORY;
-      if (lastType === 'income') {
-        lastCatKey = SETTINGS_KEYS.LAST_INCOME_CATEGORY;
-      } else if (lastType === 'savings') {
-        lastCatKey = SETTINGS_KEYS.LAST_SAVINGS_CATEGORY;
+      switch (lastType) {
+        case 'income':
+          lastCatKey = SETTINGS_KEYS.LAST_INCOME_CATEGORY;
+          break;
+        case 'savings':
+          lastCatKey = SETTINGS_KEYS.LAST_SAVINGS_CATEGORY;
+          break;
       }
       const lastCat = await getSetting(lastCatKey);
       if (lastCat) setCategory(lastCat);

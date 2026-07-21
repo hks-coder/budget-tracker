@@ -27,4 +27,8 @@ describe('normalizeTransactionType', () => {
   it('maps legacy credit to expense', () => {
     expect(normalizeTransactionType('credit')).toBe('expense');
   });
+
+  it('falls back to expense for invalid values', () => {
+    expect(normalizeTransactionType('invalid')).toBe('expense');
+  });
 });

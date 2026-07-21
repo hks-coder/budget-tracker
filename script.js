@@ -146,12 +146,15 @@ function normalizeArchive(archive) {
     }
 
     const normalizedTransactions = normalizeTransactions(archive.transactions);
-    const income = normalizedTransactions
-        .filter(t => t.type === 'income')
-        .reduce((sum, t) => sum + t.amount, 0);
-    const expense = normalizedTransactions
-        .filter(t => t.type === 'expense')
-        .reduce((sum, t) => sum + t.amount, 0);
+    const { income, expense } = normalizedTransactions.reduce((totals, transaction) => {
+        if (transaction.type === 'income') {
+            totals.income += transaction.amount;
+        } else if (transaction.type === 'expense') {
+            totals.expense += transaction.amount;
+        }
+
+        return totals;
+    }, { income: 0, expense: 0 });
 
     return {
         ...archive,
