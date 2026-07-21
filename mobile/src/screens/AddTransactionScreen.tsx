@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, Spacing, BorderRadius, FontSize } from '../constants/theme';
 import { validateTransaction } from '../core/validation';
 import { todayISO } from '../core/formatters';
-import { getCategoriesForType } from '../core/types';
+import { getCategoriesForType, normalizeTransactionType } from '../core/types';
 import { getSetting, setSetting } from '../data/transactionRepository';
 import { SETTINGS_KEYS } from '../constants/theme';
 import type { Transaction, TransactionInput, TransactionType } from '../core/types';
@@ -29,7 +29,6 @@ const TYPE_OPTIONS: { label: string; value: TransactionType; emoji: string }[] =
   { label: 'Dépense', value: 'expense', emoji: '↓' },
   { label: 'Revenu', value: 'income', emoji: '↑' },
   { label: 'Épargne', value: 'savings', emoji: '🏦' },
-  { label: 'Crédit', value: 'credit', emoji: '↩️' },
 ];
 
 function getTypeColor(type: TransactionType): string {
@@ -37,7 +36,6 @@ function getTypeColor(type: TransactionType): string {
     case 'income': return Colors.income;
     case 'expense': return Colors.expense;
     case 'savings': return Colors.savings;
-    case 'credit': return Colors.credit;
   }
 }
 
@@ -61,11 +59,22 @@ export function AddTransactionScreen({
   useEffect(() => {
     if (isEditing) return;
     (async () => {
-      const lastType = (await getSetting(SETTINGS_KEYS.LAST_TYPE)) as TransactionType | null;
-      if (lastType) setType(lastType);
+      const storedLastType = await getSetting(SETTINGS_KEYS.LAST_TYPE);
+      const lastType = typeof storedLastType === 'string'
+        ? normalizeTransactionType(storedLastType)
+        : 'expense';
+      setType(lastType);
 
-      const lastCatKey = `last_${lastType ?? 'expense'}_category` as keyof typeof SETTINGS_KEYS;
-      const lastCat = await getSetting(SETTINGS_KEYS[lastCatKey] ?? SETTINGS_KEYS.LAST_EXPENSE_CATEGORY);
+      let lastCatKey = SETTINGS_KEYS.LAST_EXPENSE_CATEGORY;
+      switch (lastType) {
+        case 'income':
+          lastCatKey = SETTINGS_KEYS.LAST_INCOME_CATEGORY;
+          break;
+        case 'savings':
+          lastCatKey = SETTINGS_KEYS.LAST_SAVINGS_CATEGORY;
+          break;
+      }
+      const lastCat = await getSetting(lastCatKey);
       if (lastCat) setCategory(lastCat);
     })();
   }, [isEditing]);
@@ -110,8 +119,6 @@ export function AddTransactionScreen({
         ? SETTINGS_KEYS.LAST_INCOME_CATEGORY
         : type === 'expense'
         ? SETTINGS_KEYS.LAST_EXPENSE_CATEGORY
-        : type === 'credit'
-        ? SETTINGS_KEYS.LAST_CREDIT_CATEGORY
         : SETTINGS_KEYS.LAST_SAVINGS_CATEGORY;
       await setSetting(catKey, category);
 
@@ -224,7 +231,7 @@ export function AddTransactionScreen({
             <Text style={styles.sectionLabel}>Description *</Text>
             <TextInput
               style={[styles.input, errors.description ? styles.inputError : null]}
-              placeholder={`Ex: ${type === 'expense' ? 'Courses Carrefour' : type === 'income' ? 'Salaire janvier' : type === 'credit' ? 'Remboursement achat' : 'Virement Livret A'}`}
+              placeholder={`Ex: ${type === 'expense' ? 'Courses Carrefour' : type === 'income' ? 'Salaire janvier' : 'Virement Livret A'}`}
               placeholderTextColor={Colors.textLight}
               value={description}
               onChangeText={setDescription}

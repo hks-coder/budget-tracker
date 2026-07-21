@@ -92,20 +92,18 @@ export function computeTotals(transactions: Transaction[]): MonthlyTotals {
   let income = 0;
   let expense = 0;
   let savings = 0;
-  let credit = 0;
 
   for (const t of transactions) {
     if (t.type === 'income') income += t.amount;
     else if (t.type === 'expense') expense += t.amount;
     else if (t.type === 'savings') savings += t.amount;
-    else if (t.type === 'credit') credit += t.amount;
   }
 
   return {
     income,
     expense,
     savings,
-    balance: income + credit - expense - savings,
+    balance: income - expense - savings,
   };
 }
 

@@ -72,13 +72,14 @@ describe('validateTransaction', () => {
       expect(result.valid).toBe(true);
     });
 
-    it('accepts credit', () => {
-      const result = validateTransaction({ ...validInput, type: 'credit' });
-      expect(result.valid).toBe(true);
-    });
-
     it('rejects invalid type', () => {
       const result = validateTransaction({ ...validInput, type: 'invalid' as never });
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.field === 'type')).toBe(true);
+    });
+
+    it('rejects legacy credit type', () => {
+      const result = validateTransaction({ ...validInput, type: 'credit' as never });
       expect(result.valid).toBe(false);
       expect(result.errors.some((e) => e.field === 'type')).toBe(true);
     });
